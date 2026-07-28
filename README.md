@@ -1,15 +1,18 @@
 # ELEVATE-China — PastureWatch 牧眼
 
-A demo of **drone-based cattle detection on grazing land**, reduced to one screen a grazier can read
-in five seconds:
+A demo of **drone-based cattle detection on grazing land**, down to the individual animal.
+Five screens, each answering one question in plain words:
 
-1. **Are the cattle safe?** — one sentence, in green, amber or red.
-2. **Where are they?** — a map where each area is coloured by how much grass it has left, and each
-   herd is a numbered dot.
-3. **What to do today?** — at most three jobs, each a plain sentence.
-4. **The herds** — four cards: how many cattle, which area, all here or not.
+| Screen | What it answers |
+|---|---|
+| **Today** | Are the cattle safe? Head count, last flight, a traffic light per herd, how far they walked, how green the grass is, and at most three jobs to do |
+| **Herd map** | Where is every animal? A simulated satellite ground with **one dot per animal**, coloured by how sure the model is (green ≥95%, amber, red = not found). Pick a herd to zoom into the mob |
+| **Animal record** | Cow ID, GPS position, ground height, when it was last seen, how far it walked, how long it stood still, how far it is from its group |
+| **Alerts** | Every animal a person should look at: not found, away from the group, not moving enough, possibly sick — plus the whole-herd jobs |
+| **Grass** | Vegetation index per area, how much of the season's grass has been eaten, and greenness through the season |
+| **History** | Flights flown, shortened and grounded; cattle counted each day; how far each herd walked |
 
-No charts, no percentages, no tabs, no jargon. Bilingual (English / 中文), light and dark.
+Bilingual (English / 中文), light and dark.
 
 ```bash
 npm install

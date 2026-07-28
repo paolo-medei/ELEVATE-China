@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useUi } from '../i18n';
 import { RanchMap } from '../components/RanchMap';
 import { paddockById, TOTAL_HEAD } from '../data/ranch';
-import { actionsForDay } from '../lib/status';
+import { actionsForDay, paddockState } from '../lib/status';
 import { fmt, SERIES_VAR } from '../lib/format';
 import type { Dataset } from '../data/types';
 
@@ -38,6 +38,15 @@ export function TodayView({
     (f) => f.day === day && f.detections.length > 0 && f.status === 'complete',
   );
   const jobs = useMemo(() => actionsForDay(data, day).slice(0, 3), [data, day]);
+
+  const lastFlight = [...data.flights]
+    .filter((f) => f.day <= day && f.status !== 'aborted')
+    .pop();
+  const herdDays = data.herdDays.filter((hd) => hd.day === day);
+  const walked = herdDays.reduce((a, hd) => a + hd.distanceKm, 0) / Math.max(1, herdDays.length);
+  const areas = data.paddockDays.filter((pd) => pd.day === day);
+  const greenness = areas.reduce((a, pd) => a + pd.ndvi, 0) / Math.max(1, areas.length);
+  const areasOut = areas.filter((pd) => paddockState(pd) === 'outOfGrass').length;
   const steps = data.stepIndex[day][SNAPSHOT_HOUR];
 
   const ok = shortHerds.length === 0 && detections.size > 0;
@@ -84,6 +93,37 @@ export function TodayView({
         </span>
       </section>
 
+      <section className="fact-strip">
+        <div className="fact">
+          <span className="fact-label">{t('factCows')}</span>
+          <span className="fact-value">{fmt(TOTAL_HEAD)}</span>
+        </div>
+        <div className="fact">
+          <span className="fact-label">{t('factFlight')}</span>
+          <span className="fact-value small">
+            {lastFlight
+              ? `${data.weather[lastFlight.day].date} · ${String(lastFlight.hour).padStart(2, '0')}:00`
+              : '—'}
+          </span>
+        </div>
+        <div className="fact">
+          <span className="fact-label">{t('factWalked')}</span>
+          <span className="fact-value">
+            {walked.toFixed(1)} <small>km</small>
+          </span>
+        </div>
+        <div className="fact">
+          <span className="fact-label">{t('factGreen')}</span>
+          <span className="fact-value">
+            {greenness.toFixed(2)}{' '}
+            <small>
+              {greenness >= 0.6 ? t('factGreenGood') : greenness >= 0.45 ? t('factGreenFair') : t('factGreenPoor')}
+            </small>
+          </span>
+          <span className="fact-note">{t('factAreasOut', { n: areasOut })}</span>
+        </div>
+      </section>
+
       <section className="card big-card">
         <h2 className="big-title">{t('bigWhere')}</h2>
         <RanchMap
@@ -126,13 +166,34 @@ export function TodayView({
             const short = det ? gap / det.expected >= 0.03 : false;
             return (
               <div className="big-herd" key={h.id}>
-                <span className="big-herd-dot" style={{ background: SERIES_VAR(Number(h.color.slice(1))) }}>
-                  {h.id.slice(1)}
+                <span className="big-herd-top">
+                  <span
+                    className="big-herd-dot"
+                    style={{ background: SERIES_VAR(Number(h.color.slice(1))) }}
+                  >
+                    {h.id.slice(1)}
+                  </span>
+                  <span
+                    className="herd-light"
+                    style={{
+                      background: short
+                        ? flightFinished
+                          ? 'var(--critical)'
+                          : 'var(--warning)'
+                        : step?.offPaddock
+                          ? 'var(--critical)'
+                          : 'var(--good)',
+                    }}
+                    title={t('herdStatus')}
+                  />
                 </span>
                 <span className="big-herd-name">{b(h.name)}</span>
                 <span className="big-herd-line">{t('bigCows', { n: fmt(h.head) })}</span>
                 <span className="big-herd-line">
                   {step ? b(paddockById.get(step.paddockId)!.name) : '—'}
+                </span>
+                <span className="big-herd-line">
+                  {t('factWalked')}: {(data.herdDays.find((hd) => hd.day === day && hd.herdId === h.id)?.distanceKm ?? 0).toFixed(1)} km
                 </span>
                 <span
                   className={`big-herd-tag ${short ? (flightFinished ? 'bad' : 'unsure') : 'good'}`}

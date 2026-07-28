@@ -6,6 +6,7 @@ import { paddockById, RANCH_H, RANCH_W, riverPath } from '../data/ranch';
 import { formatLatLon, polygonPath, toLatLon } from '../lib/geo';
 import { paddockState, STATE_SEVERITY } from '../lib/status';
 import { STATUS_VAR } from '../lib/format';
+import { elevationAt, type CowState } from '../data/animals';
 import type { Dataset, Flight, HerdStep, Pt } from '../data/types';
 
 export type MapLayer = 'status' | 'pressure' | 'biomass' | 'utilisation' | 'rest' | 'none';
@@ -59,6 +60,11 @@ export function RanchMap({
   layer,
   showTrails,
   minimal = false,
+  cowStates,
+  basemap = 'plain',
+  focus,
+  selectedCow,
+  onSelectCow,
   flight,
   selectedPaddock,
   onSelectPaddock,
@@ -72,6 +78,13 @@ export function RanchMap({
   showTrails: boolean;
   /** simple view: drop the labels and readouts that only a specialist wants */
   minimal?: boolean;
+  /** when given, every animal is drawn individually instead of one dot per herd */
+  cowStates?: CowState[];
+  basemap?: 'plain' | 'satellite';
+  /** frame this rectangle (ranch metres) instead of the whole ranch */
+  focus?: { minX: number; minY: number; maxX: number; maxY: number };
+  selectedCow?: string | null;
+  onSelectCow?: (id: string | null) => void;
   flight?: Flight;
   selectedPaddock: string | null;
   onSelectPaddock: (id: string | null) => void;
@@ -129,16 +142,35 @@ export function RanchMap({
 
   const onMove = (e: React.MouseEvent<SVGSVGElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - r.left) / r.width) * VB_W;
-    const y = ((e.clientY - r.top) / r.height) * VB_H;
+    const x = vb.x + ((e.clientX - r.left) / r.width) * vb.w;
+    const y = vb.y + ((e.clientY - r.top) / r.height) * vb.h;
     const ll = toLatLon(
       { x: x / SCALE, y: y / SCALE },
       data.meta.origin,
       data.meta.metresPerDegLat,
       data.meta.metresPerDegLon,
     );
-    setCursor({ x, y, ll: formatLatLon(ll) });
+    setCursor({
+      x,
+      y,
+      ll: `${formatLatLon(ll)}  ·  ${elevationAt({ x: x / SCALE, y: y / SCALE })} m`,
+    });
   };
+
+  const vb = (() => {
+    if (!focus) return { x: 0, y: 0, w: VB_W, h: VB_H };
+    const cx = ((focus.minX + focus.maxX) / 2) * SCALE;
+    const cy = ((focus.minY + focus.maxY) / 2) * SCALE;
+    // grow the short side so the frame matches the map's aspect and nothing stretches
+    const aspect = VB_W / VB_H;
+    let w = (focus.maxX - focus.minX) * SCALE;
+    let h = (focus.maxY - focus.minY) * SCALE;
+    if (w / h > aspect) h = w / aspect;
+    else w = h * aspect;
+    return { x: cx - w / 2, y: cy - h / 2, w, h };
+  })();
+  /** zoom factor: multiply sizes by this so labels and dots keep their screen size */
+  const k = vb.w / VB_W;
 
   const hoveredPd = hoverPaddock ? pdByPaddock.get(hoverPaddock) : null;
   const hoveredPaddock = hoverPaddock ? paddockById.get(hoverPaddock)! : null;
@@ -146,7 +178,7 @@ export function RanchMap({
   return (
     <div className="map-shell">
       <svg
-        viewBox={`0 0 ${VB_W} ${VB_H}`}
+        viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`}
         role="img"
         aria-label={t('mapTitle')}
         onMouseMove={onMove}
@@ -161,6 +193,20 @@ export function RanchMap({
           <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
             <feGaussianBlur stdDeviation="2.2" />
           </filter>
+          <filter id="terrainA" x="0%" y="0%" width="100%" height="100%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.016" numOctaves="5" seed="11" />
+            <feColorMatrix
+              type="matrix"
+              values="0 0 0 0 0.29  0 0 0 0 0.33  0 0 0 0 0.17  0.85 0 0 0 0.05"
+            />
+          </filter>
+          <filter id="terrainB" x="0%" y="0%" width="100%" height="100%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.05 0.07" numOctaves="3" seed="4" />
+            <feColorMatrix
+              type="matrix"
+              values="0 0 0 0 0.45  0 0 0 0 0.41  0 0 0 0 0.24  0.55 0 0 0 0"
+            />
+          </filter>
           <filter id="heatBlur" x="-5%" y="-5%" width="110%" height="110%">
             <feGaussianBlur stdDeviation="7" />
           </filter>
@@ -169,7 +215,15 @@ export function RanchMap({
           </clipPath>
         </defs>
 
-        <rect width={VB_W} height={VB_H} fill="url(#steppe)" />
+        {basemap === 'satellite' ? (
+          <g>
+            <rect width={VB_W} height={VB_H} fill="#3d4326" />
+            <rect width={VB_W} height={VB_H} filter="url(#terrainA)" />
+            <rect width={VB_W} height={VB_H} filter="url(#terrainB)" opacity={0.5} />
+          </g>
+        ) : (
+          <rect width={VB_W} height={VB_H} fill="url(#steppe)" />
+        )}
 
         {/* relief hints */}
         <g opacity="0.55" fill="none" stroke="var(--land-line)" strokeWidth="1">
@@ -259,14 +313,20 @@ export function RanchMap({
           const q = px(w.at);
           return (
             <g key={w.id}>
-              <circle cx={q.x} cy={q.y} r={minimal ? 10 : 7} fill="var(--seq-400)" fillOpacity={0.22} />
               <circle
                 cx={q.x}
                 cy={q.y}
-                r={minimal ? 5 : 3.4}
+                r={(minimal ? 10 : 7) * k}
+                fill="var(--seq-400)"
+                fillOpacity={0.22}
+              />
+              <circle
+                cx={q.x}
+                cy={q.y}
+                r={(minimal ? 5 : 3.4) * k}
                 fill="var(--seq-400)"
                 stroke="var(--surface-1)"
-                strokeWidth={minimal ? 2 : 1}
+                strokeWidth={(minimal ? 2 : 1) * k}
               />
               {!minimal && (
                 <text x={q.x} y={q.y + 17} textAnchor="middle" className="paddock-sublabel">
@@ -308,7 +368,13 @@ export function RanchMap({
           const pd = pdByPaddock.get(p.id);
           return (
             <g key={`lbl-${p.id}`} pointerEvents="none">
-              <text x={c.x} y={c.y - 4} textAnchor="middle" className="paddock-label">
+              <text
+                x={c.x}
+                y={c.y - 4 * k}
+                textAnchor="middle"
+                className="paddock-label"
+                style={{ fontSize: 11 * k, strokeWidth: 3 * k }}
+              >
                 {b(p.name)}
               </text>
               {!minimal && (
@@ -352,7 +418,51 @@ export function RanchMap({
             );
           })}
 
-        {/* herds */}
+        {/* herds — one dot per animal when a cow snapshot is supplied */}
+        {cowStates ? (
+          cowStates.map((c) => {
+            const q = px(c.at);
+            const sel = selectedCow === c.cow.id;
+            const colour = !c.detected
+              ? 'var(--critical)'
+              : c.confidencePct >= 95
+                ? 'var(--good)'
+                : c.confidencePct >= 85
+                  ? 'var(--warning)'
+                  : 'var(--serious)';
+            return (
+              <g key={c.cow.id} onClick={() => onSelectCow?.(sel ? null : c.cow.id)}>
+                <circle
+                  cx={q.x}
+                  cy={q.y}
+                  r={(sel ? 5 : 2.4) * k}
+                  fill={c.detected ? colour : 'none'}
+                  stroke={
+                    !c.detected
+                      ? 'var(--critical)'
+                      : sel
+                        ? 'var(--text-primary)'
+                        : 'rgba(0,0,0,0.45)'
+                  }
+                  strokeWidth={(sel ? 2 : c.detected ? 0.5 : 1.2) * k}
+                  style={{ cursor: 'pointer' }}
+                />
+                {(sel || c.flags.includes('sick') || c.flags.includes('notFound')) && (
+                  <circle
+                    cx={q.x}
+                    cy={q.y}
+                    r={(sel ? 11 : 6) * k}
+                    fill="none"
+                    stroke={colour}
+                    strokeWidth={1.4 * k}
+                    strokeDasharray={`${2 * k} ${2 * k}`}
+                  />
+                )}
+              </g>
+            );
+          })
+        ) : (
+          <>
         {currentSteps.map((s) => {
           const herd = data.herds.find((h) => h.id === s.herdId)!;
           const q = px(s.at);
@@ -420,16 +530,31 @@ export function RanchMap({
           );
         })}
 
+          </>
+        )}
         {/* scale bar */}
-        <g transform={`translate(${VB_W - 130} ${VB_H - 26})`}>
-          <line x1={0} x2={100} y1={0} y2={0} stroke="var(--text-secondary)" strokeWidth={2} />
-          <line x1={0} x2={0} y1={-4} y2={4} stroke="var(--text-secondary)" strokeWidth={2} />
-          <line x1={100} x2={100} y1={-4} y2={4} stroke="var(--text-secondary)" strokeWidth={2} />
-          <text x={50} y={-7} textAnchor="middle" className="paddock-sublabel">
+        <g transform={`translate(${vb.x + vb.w - 100 - 30 * k} ${vb.y + vb.h - 26 * k})`}>
+          <line x1={0} x2={100} y1={0} y2={0} stroke="var(--text-secondary)" strokeWidth={2 * k} />
+          <line x1={0} x2={0} y1={-4 * k} y2={4 * k} stroke="var(--text-secondary)" strokeWidth={2 * k} />
+          <line
+            x1={100}
+            x2={100}
+            y1={-4 * k}
+            y2={4 * k}
+            stroke="var(--text-secondary)"
+            strokeWidth={2 * k}
+          />
+          <text
+            x={50}
+            y={-7 * k}
+            textAnchor="middle"
+            className="paddock-sublabel"
+            style={{ fontSize: 9.5 * k, strokeWidth: 3 * k }}
+          >
             1 km
           </text>
         </g>
-        <g transform="translate(28 40)">
+        <g transform={`translate(${vb.x + 28 * k} ${vb.y + 40 * k}) scale(${k})`}>
           <path d="M0 -14 L5 6 L0 1 L-5 6 Z" fill="var(--text-secondary)" />
           <text y={20} textAnchor="middle" className="paddock-sublabel">
             N

@@ -2,11 +2,27 @@ import { useMemo, useState } from 'react';
 import { useUi } from './i18n';
 import { buildDataset } from './data/simulate';
 import { TodayView } from './views/TodayView';
+import { MapView } from './views/MapView';
+import { AlertsView } from './views/AlertsView';
+import { HistoryView } from './views/HistoryView';
+import { GrassView } from './views/GrassView';
+
+type Section = 'today' | 'map' | 'alerts' | 'history' | 'grass';
 
 export default function App() {
   const { t, b, lang, setLang, theme, setTheme } = useUi();
   const data = useMemo(() => buildDataset(), []);
   const [day, setDay] = useState(data.meta.days - 1);
+  const [hour, setHour] = useState(8);
+  const [section, setSection] = useState<Section>('today');
+
+  const sections: { key: Section; label: string }[] = [
+    { key: 'today', label: t('navToday') },
+    { key: 'map', label: t('navMap') },
+    { key: 'alerts', label: t('navAlerts') },
+    { key: 'grass', label: t('navGrass') },
+    { key: 'history', label: t('navHistory') },
+  ];
 
   return (
     <div className="app">
@@ -31,6 +47,21 @@ export default function App() {
           </div>
         </div>
 
+        <nav className="tabs" role="tablist" aria-label="sections">
+          {sections.map((s) => (
+            <button
+              key={s.key}
+              type="button"
+              role="tab"
+              className="tab"
+              aria-selected={section === s.key}
+              onClick={() => setSection(s.key)}
+            >
+              {s.label}
+            </button>
+          ))}
+        </nav>
+
         <div className="topbar-right">
           <button
             type="button"
@@ -53,7 +84,11 @@ export default function App() {
       </header>
 
       <main className="main">
-        <TodayView data={data} day={day} onDay={setDay} />
+        {section === 'today' && <TodayView data={data} day={day} onDay={setDay} />}
+        {section === 'map' && <MapView data={data} day={day} hour={hour} onHour={setHour} />}
+        {section === 'alerts' && <AlertsView data={data} day={day} hour={hour} />}
+        {section === 'grass' && <GrassView data={data} day={day} />}
+        {section === 'history' && <HistoryView data={data} day={day} onDay={setDay} />}
 
         <footer className="footer">
           <span>{t('demoBanner')}</span>

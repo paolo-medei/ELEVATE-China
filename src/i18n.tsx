@@ -15,6 +15,86 @@ const DICT = {
     zh: '演示数据 · 模拟牧季',
   },
 
+  // sections
+  navToday: { en: 'Today', zh: '今日' },
+  navMap: { en: 'Herd map', zh: '牛群地图' },
+  navAlerts: { en: 'Alerts', zh: '预警' },
+  navHistory: { en: 'History', zh: '历史记录' },
+  navGrass: { en: 'Grass', zh: '牧草' },
+
+  // herd map & individual animals
+  mapHerdTitle: { en: 'Every animal on the ground', zh: '每头牛的位置' },
+  mapHerdSub: {
+    en: '{n} animals located by the last flight — click a dot for its record',
+    zh: '最近一次航拍定位 {n} 头牛，点击圆点查看详情',
+  },
+  basemapSatellite: { en: 'Satellite', zh: '卫星图' },
+  basemapPlain: { en: 'Plain', zh: '底图' },
+  allHerds: { en: 'All herds', zh: '全部牛群' },
+  confHigh: { en: 'Sure (95%+)', zh: '高置信 (95%+)' },
+  confMid: { en: 'Fairly sure', zh: '较高' },
+  confLow: { en: 'Unsure', zh: '偏低' },
+  confNone: { en: 'Not found', zh: '未识别' },
+  cowDetailTitle: { en: 'Animal record', zh: '个体档案' },
+  cowDetailEmpty: {
+    en: 'Click any animal on the map, or one of the flagged animals below.',
+    zh: '点击地图上的任意圆点，或下方标记的牛只。',
+  },
+  cowSeen: { en: 'Last seen', zh: '最近一次看到' },
+  cowSeenNow: { en: 'This flight', zh: '本次航拍' },
+  cowSeenDaysAgo: { en: '{n} days ago', zh: '{n} 天前' },
+  cowSeenYesterday: { en: 'Yesterday', zh: '昨天' },
+  cowSeenLong: { en: 'Not seen for weeks', zh: '数周未见' },
+  cowGps: { en: 'GPS', zh: 'GPS 坐标' },
+  cowHeight: { en: 'Height', zh: '海拔' },
+  cowWalked: { en: 'Walked today', zh: '今日行走' },
+  cowStill: { en: 'Time standing still', zh: '静止时长' },
+  cowFromHerd: { en: 'Distance from herd', zh: '离群距离' },
+  flag_notFound: { en: 'Not found', zh: '未找到' },
+  flag_isolated: { en: 'Away from the group', zh: '离群' },
+  flag_stationary: { en: 'Not moving enough', zh: '活动过少' },
+  flag_sick: { en: 'Possibly sick', zh: '疑似患病' },
+
+  // alerts page
+  alertsPageSub: { en: 'Every animal the system wants a person to look at', zh: '需人工复核的牛只' },
+  alertsNone: { en: 'No animal needs attention today.', zh: '今日无需复核的牛只。' },
+  alertsHerdTitle: { en: 'Whole-herd alerts', zh: '牛群级预警' },
+  cowsFlagged: { en: '{n} animals flagged', zh: '{n} 头牛被标记' },
+
+  // history page
+  historyFlights: { en: 'Flights flown', zh: '已飞架次' },
+  historyFlightsSub: { en: 'Two a day when the weather allows', zh: '天气允许时每日两架次' },
+  historyCounts: { en: 'Cattle counted each day', zh: '每日清点头数' },
+  historyCountsSub: { en: 'Against {n} on the books', zh: '在册共 {n} 头' },
+  historyTable: { en: 'Recent flights', zh: '近期航拍' },
+  historyWalk: { en: 'How far the herds walked', zh: '牛群行走距离' },
+  historyWalkSub: { en: 'Kilometres per animal per day', zh: '每头每日公里数' },
+
+  // grass page
+  grassPageTitle: { en: 'Grass quality', zh: '牧草质量' },
+  grassPageSub: {
+    en: 'How green each area is, and how much of its grass has been eaten',
+    zh: '各草场的植被状况与采食比例',
+  },
+  greenness: { en: 'Greenness', zh: '植被指数' },
+  greennessSub: {
+    en: 'Vegetation index from the drone camera: 0.8 is lush, 0.2 is bare',
+    zh: '无人机影像植被指数：0.8 为茂盛，0.2 为裸露',
+  },
+  greennessTrend: { en: 'Greenness through the season', zh: '牧季植被指数变化' },
+  grassStock: { en: 'Grass on the ground', zh: '现存牧草' },
+
+  // today facts
+  factCows: { en: 'Cattle on the farm', zh: '全场牛只' },
+  factFlight: { en: 'Last drone flight', zh: '最近航拍' },
+  factWalked: { en: 'Walked today', zh: '今日行走' },
+  factGreen: { en: 'Grass greenness', zh: '牧草长势' },
+  factGreenGood: { en: 'good', zh: '良好' },
+  factGreenFair: { en: 'fair', zh: '一般' },
+  factGreenPoor: { en: 'poor', zh: '较差' },
+  factAreasOut: { en: '{n} areas out of grass', zh: '{n} 个草场牧草用尽' },
+  herdStatus: { en: 'Herd status', zh: '牛群状态' },
+
   // the one screen
   bigAllSafe: { en: 'All cattle are safe', zh: '牛群全部安全' },
   bigMissing: { en: '{n} cattle missing from {herd}', zh: '{herd} 缺 {n} 头牛' },
@@ -84,12 +164,6 @@ const DICT = {
   prevDay: { en: 'Previous day', zh: '前一天' },
   nextDay: { en: 'Next day', zh: '后一天' },
   latestDay: { en: 'Latest', zh: '最新' },
-
-  // views
-  navOps: { en: 'Herd operations', zh: '牛群作业' },
-  navGrass: { en: 'Grassland', zh: '草场管理' },
-  navDrone: { en: 'Drone missions', zh: '无人机任务' },
-  navGov: { en: 'Governance', zh: '监管与草畜平衡' },
 
   // controls
   play: { en: 'Play day', zh: '播放' },
