@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useUi } from './i18n';
 import { buildDataset } from './data/simulate';
+import { SimpleView } from './views/SimpleView';
 import { OperationsView } from './views/OperationsView';
 import { GrasslandView } from './views/GrasslandView';
 import { DroneView } from './views/DroneView';
@@ -9,10 +10,12 @@ import { RANCH_AREA_HA, TOTAL_HEAD } from './data/ranch';
 import { fmt } from './lib/format';
 
 type View = 'ops' | 'grass' | 'drone' | 'gov';
+type Mode = 'simple' | 'detailed';
 
 export default function App() {
   const { t, b, lang, setLang, theme, setTheme } = useUi();
   const data = useMemo(() => buildDataset(), []);
+  const [mode, setMode] = useState<Mode>('simple');
   const [view, setView] = useState<View>('ops');
   const [day, setDay] = useState(data.meta.days - 1);
   const [hour, setHour] = useState(7);
@@ -52,18 +55,39 @@ export default function App() {
         </div>
 
         <nav className="tabs" role="tablist" aria-label="views">
-          {tabs.map((tab) => (
+          <button
+            type="button"
+            role="tab"
+            className="tab"
+            aria-selected={mode === 'simple'}
+            onClick={() => setMode('simple')}
+          >
+            {t('modeSimple')}
+          </button>
+          {mode === 'simple' ? (
             <button
-              key={tab.key}
               type="button"
               role="tab"
               className="tab"
-              aria-selected={view === tab.key}
-              onClick={() => setView(tab.key)}
+              aria-selected={false}
+              onClick={() => setMode('detailed')}
             >
-              {tab.label}
+              {t('modeDetailed')}
             </button>
-          ))}
+          ) : (
+            tabs.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                role="tab"
+                className="tab"
+                aria-selected={view === tab.key}
+                onClick={() => setView(tab.key)}
+              >
+                {tab.label}
+              </button>
+            ))
+          )}
         </nav>
 
         <div className="topbar-right">
@@ -92,7 +116,8 @@ export default function App() {
       </header>
 
       <main className="main">
-        {view === 'ops' && (
+        {mode === 'simple' && <SimpleView data={data} day={day} onDay={setDay} />}
+        {mode === 'detailed' && view === 'ops' && (
           <OperationsView
             data={data}
             day={day}
@@ -103,9 +128,9 @@ export default function App() {
             onPlaying={setPlaying}
           />
         )}
-        {view === 'grass' && <GrasslandView data={data} day={day} onDay={setDay} />}
-        {view === 'drone' && <DroneView data={data} day={day} onDay={setDay} />}
-        {view === 'gov' && <GovernanceView data={data} day={day} onDay={setDay} />}
+        {mode === 'detailed' && view === 'grass' && <GrasslandView data={data} day={day} onDay={setDay} />}
+        {mode === 'detailed' && view === 'drone' && <DroneView data={data} day={day} onDay={setDay} />}
+        {mode === 'detailed' && view === 'gov' && <GovernanceView data={data} day={day} onDay={setDay} />}
 
         <footer className="footer">
           <span>

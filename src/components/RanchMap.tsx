@@ -4,9 +4,11 @@ import { rampColor, useDiverging, useRamp } from './charts';
 import { buildHeatmap } from '../data/simulate';
 import { paddockById, RANCH_H, RANCH_W, riverPath } from '../data/ranch';
 import { formatLatLon, polygonPath, toLatLon } from '../lib/geo';
+import { paddockState, STATE_SEVERITY } from '../lib/status';
+import { STATUS_VAR } from '../lib/format';
 import type { Dataset, Flight, HerdStep, Pt } from '../data/types';
 
-export type MapLayer = 'pressure' | 'biomass' | 'utilisation' | 'rest' | 'none';
+export type MapLayer = 'status' | 'pressure' | 'biomass' | 'utilisation' | 'rest' | 'none';
 
 const VB_W = 1000;
 const SCALE = VB_W / RANCH_W;
@@ -56,6 +58,7 @@ export function RanchMap({
   hour,
   layer,
   showTrails,
+  minimal = false,
   flight,
   selectedPaddock,
   onSelectPaddock,
@@ -67,6 +70,8 @@ export function RanchMap({
   hour: number;
   layer: MapLayer;
   showTrails: boolean;
+  /** simple view: drop the labels and readouts that only a specialist wants */
+  minimal?: boolean;
   flight?: Flight;
   selectedPaddock: string | null;
   onSelectPaddock: (id: string | null) => void;
@@ -112,6 +117,10 @@ export function RanchMap({
     const pd = pdByPaddock.get(paddockId);
     const p = paddockById.get(paddockId)!;
     if (!pd || layer === 'none' || layer === 'pressure') return 'var(--land)';
+    if (layer === 'status') {
+      const st = paddockState(pd);
+      return st === 'resting' ? 'var(--land)' : STATUS_VAR[STATE_SEVERITY[st]];
+    }
     if (layer === 'biomass') return rampColor(ramp, pd.biomass / p.biomassCeiling);
     if (layer === 'rest') return rampColor(ramp, Math.min(1, pd.restDays / 30));
     // utilisation: the full forage allowance (1.0) is the neutral midpoint
@@ -207,7 +216,9 @@ export function RanchMap({
                 className="paddock"
                 d={polygonPath(p.polygon, px)}
                 fill={layer === 'pressure' ? 'transparent' : paddockFill(p.id)}
-                fillOpacity={layer === 'none' || layer === 'pressure' ? 0.15 : 0.82}
+                fillOpacity={
+                  layer === 'none' || layer === 'pressure' ? 0.15 : layer === 'status' ? 0.45 : 0.82
+                }
                 stroke={active ? 'var(--text-primary)' : 'var(--land-line)'}
                 strokeWidth={active ? 2 : 1.4}
                 strokeDasharray={active ? undefined : '7 5'}
@@ -250,9 +261,11 @@ export function RanchMap({
             <g key={w.id}>
               <circle cx={q.x} cy={q.y} r={7} fill="var(--seq-400)" fillOpacity={0.22} />
               <circle cx={q.x} cy={q.y} r={3.4} fill="var(--seq-400)" stroke="var(--surface-1)" strokeWidth={1} />
-              <text x={q.x} y={q.y + 17} textAnchor="middle" className="paddock-sublabel">
-                {b(w.name)}
-              </text>
+              {!minimal && (
+                <text x={q.x} y={q.y + 17} textAnchor="middle" className="paddock-sublabel">
+                  {b(w.name)}
+                </text>
+              )}
             </g>
           );
         })}
@@ -273,9 +286,11 @@ export function RanchMap({
                 strokeWidth={1.4}
                 transform={l.kind === 'dronePad' ? `rotate(45 ${q.x} ${q.y})` : undefined}
               />
-              <text x={q.x + 8} y={q.y + 3.5} className="paddock-sublabel">
-                {b(l.name)}
-              </text>
+              {!minimal && (
+                <text x={q.x + 8} y={q.y + 3.5} className="paddock-sublabel">
+                  {b(l.name)}
+                </text>
+              )}
             </g>
           );
         })}
@@ -290,7 +305,9 @@ export function RanchMap({
                 {p.code} · {b(p.name)}
               </text>
               <text x={c.x} y={c.y + 9} textAnchor="middle" className="paddock-sublabel">
-                {layer === 'biomass' && pd
+                {layer === 'status' && pd
+                  ? t(`state_${paddockState(pd)}` as 'state_ok')
+                  : layer === 'biomass' && pd
                   ? `${pd.biomass} kg/ha`
                   : layer === 'utilisation' && pd
                     ? `${Math.round(pd.utilization * 100)}%`
@@ -394,7 +411,7 @@ export function RanchMap({
       </svg>
 
       <div className="map-overlay tr">
-        {cursor && <div className="map-chip">{cursor.ll}</div>}
+        {cursor && !minimal && <div className="map-chip">{cursor.ll}</div>}
         {hoveredPaddock && (
           <div className="map-chip">
             <strong>
@@ -430,7 +447,23 @@ export function RanchMap({
 
       <div className="map-overlay bl">
         <div className="map-chip">
-          {layer === 'utilisation' ? (
+          {layer === 'status' ? (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {(['move', 'spent', 'watch', 'ok', 'resting'] as const).map((st) => (
+                <span key={st} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  <span
+                    className="legend-swatch"
+                    style={{
+                      background: st === 'resting' ? 'var(--land)' : STATUS_VAR[STATE_SEVERITY[st]],
+                      border: st === 'resting' ? '1px solid var(--border-strong)' : undefined,
+                    }}
+                    aria-hidden="true"
+                  />
+                  {t(`state_${st}` as 'state_ok')}
+                </span>
+              ))}
+            </span>
+          ) : layer === 'utilisation' ? (
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span>{t('overUsed')}</span>
               <span

@@ -23,7 +23,16 @@ cycles through the resting ones.
 
 Bilingual throughout (English / 中文) with light and dark themes — both switchable from the header.
 
-## The four views
+## Two ways in
+
+The app opens on **Today** — one screen that answers "is everything alright?" before it shows a
+single chart: a plain-language headline, four tiles, a traffic-light map, a ranked to-do list, and
+grass-left-per-paddock. Every item explains itself in a sentence, and tapping a job reveals the
+reading behind it. No jargon, no charts to interpret.
+
+**Full dashboard** switches to the four analyst views below, for when someone wants the numbers.
+
+## The four detailed views
 
 | View | Audience | What it answers |
 |---|---|---|
