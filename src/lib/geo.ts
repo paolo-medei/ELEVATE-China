@@ -57,5 +57,16 @@ export const toLatLon = (
   lon: origin.lon + p.x / mPerDegLon,
 });
 
+/** The inverse, so a coordinate typed into the spreadsheet lands back on the map. */
+export const fromLatLon = (
+  ll: { lat: number; lon: number },
+  origin: { lat: number; lon: number },
+  mPerDegLat: number,
+  mPerDegLon: number,
+): Pt => ({
+  x: (ll.lon - origin.lon) * mPerDegLon,
+  y: -(ll.lat - origin.lat) * mPerDegLat,
+});
+
 export const formatLatLon = (ll: { lat: number; lon: number }) =>
   `${ll.lat.toFixed(4)}°N  ${ll.lon.toFixed(4)}°E`;

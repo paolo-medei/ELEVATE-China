@@ -1,39 +1,63 @@
 import { useRef, useState } from 'react';
 import { useUi } from '../i18n';
 import { applyFarm, downloadFarm, resetFarm, usingCustomFarm } from '../data/source';
-import { downloadWorkbook, farmFromWorkbook, WorkbookError } from '../data/workbook';
+import { recordCounts } from '../data/records';
+import { downloadWorkbook, farmFromWorkbook, WorkbookError, type Depth } from '../data/workbook';
+import { fmt } from '../lib/format';
+import type { Dataset } from '../data/types';
 
 /**
  * Where the data gets changed. Excel is the way in — the spreadsheet is the same database
  * the app runs on, one sheet per topic — with the raw JSON kept behind a fold for anyone
  * who wants it.
  */
-export function DataPanel({ onClose }: { onClose: () => void }) {
+export function DataPanel({ data, onClose }: { data: Dataset; onClose: () => void }) {
   const { t } = useUi();
   const excelRef = useRef<HTMLInputElement>(null);
   const jsonRef = useRef<HTMLInputElement>(null);
   const [problem, setProblem] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<'reading' | 'writing' | null>(null);
   const [advanced, setAdvanced] = useState(false);
+  const [depth, setDepth] = useState<Depth>('fortnight');
+
+  const head = data.herds.reduce((a, h) => a + h.head, 0);
+  const days = depth === 'season' ? data.meta.days : Math.min(14, data.meta.days);
+  const cowRows = data.flights.filter(
+    (f) => f.status !== 'aborted' && f.day >= data.meta.days - days,
+  ).length * head;
+
+  const save = async () => {
+    setProblem(null);
+    setBusy('writing');
+    // let the button repaint before the write locks the thread for a few seconds
+    await new Promise((r) => setTimeout(r, 30));
+    try {
+      await downloadWorkbook(data, depth);
+    } catch {
+      setProblem('the file was too large for this browser — try the fortnight instead');
+    }
+    setBusy(null);
+  };
 
   const loadExcel = async (file: File | undefined) => {
     if (!file) return;
     setProblem(null);
-    setBusy(true);
+    setBusy('reading');
+    await new Promise((r) => setTimeout(r, 30));
     try {
       // applyFarm reloads the page on success, so only a failure ever returns here
-      setProblem(applyFarm(await farmFromWorkbook(file)));
+      setProblem(await applyFarm(await farmFromWorkbook(file)));
     } catch (e) {
       setProblem(e instanceof WorkbookError ? e.message : 'this file is not a readable spreadsheet');
     }
-    setBusy(false);
+    setBusy(null);
   };
 
   const loadJson = async (file: File | undefined) => {
     if (!file) return;
     setProblem(null);
     try {
-      setProblem(applyFarm(JSON.parse(await file.text())));
+      setProblem(await applyFarm(JSON.parse(await file.text())));
     } catch {
       setProblem('not valid JSON');
     }
@@ -54,18 +78,36 @@ export function DataPanel({ onClose }: { onClose: () => void }) {
         <div className="data-panel-state">{usingCustomFarm ? t('dataCustom') : t('dataOriginal')}</div>
 
         <div className="data-panel-actions">
-          <button type="button" className="ghost-btn primary" onClick={downloadWorkbook}>
-            <XlIcon /> {t('dataDownloadXl')}
+          <button type="button" className="ghost-btn primary" onClick={save} disabled={busy !== null}>
+            <XlIcon /> {busy === 'writing' ? t('dataWriting') : t('dataDownloadXl')}
           </button>
+          <div className="data-depth" role="radiogroup" aria-label={t('dataDepth')}>
+            {(['fortnight', 'season'] as Depth[]).map((d) => (
+              <button
+                key={d}
+                type="button"
+                role="radio"
+                aria-checked={depth === d}
+                className="depth-btn"
+                onClick={() => setDepth(d)}
+              >
+                {t(d === 'fortnight' ? 'dataLast14' : 'dataWholeSeason')}
+              </button>
+            ))}
+          </div>
+          <div className="data-panel-state">
+            {t('dataRows', { n: fmt(Math.round(cowRows)), days })}
+            {depth === 'season' && ` ${t('dataSeasonSlow')}`}
+          </div>
           <button
             type="button"
             className="ghost-btn primary"
             onClick={() => excelRef.current?.click()}
-            disabled={busy}
+            disabled={busy !== null}
           >
-            <XlIcon /> {busy ? t('dataReading') : t('dataLoadXl')}
+            <XlIcon /> {busy === 'reading' ? t('dataReading') : t('dataLoadXl')}
           </button>
-          <button type="button" className="ghost-btn" onClick={resetFarm} disabled={!usingCustomFarm}>
+          <button type="button" className="ghost-btn" onClick={() => void resetFarm()} disabled={!usingCustomFarm}>
             ↺ {t('dataReset')}
           </button>
           <input
@@ -83,6 +125,15 @@ export function DataPanel({ onClose }: { onClose: () => void }) {
         {problem && <div className="data-panel-error">{t('dataBad', { why: problem })}</div>}
 
         <p className="data-panel-hint">{t('dataSheets')}</p>
+        {recordCounts.cows + recordCounts.counts + recordCounts.grassland > 0 && (
+          <p className="data-panel-hint">
+            {t('dataUsingRecords', {
+              cows: fmt(recordCounts.cows),
+              counts: fmt(recordCounts.counts),
+              grass: fmt(recordCounts.grassland),
+            })}
+          </p>
+        )}
 
         <details className="data-panel-more" open={advanced} onToggle={(e) => setAdvanced(e.currentTarget.open)}>
           <summary>{t('dataAdvanced')}</summary>

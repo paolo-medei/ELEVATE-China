@@ -29,8 +29,24 @@ const DICT = {
   dataOriginal: { en: 'Original data in use', zh: '正在使用原始数据' },
   dataBadge: { en: 'Your data', zh: '自定义数据' },
   dataSheets: {
-    en: 'Five sheets: Farm · Areas · Herds · Animals to watch · Weather. Change a cell, save the file, load it back.',
-    zh: '五个工作表：Farm（牧场）· Areas（草场）· Herds（牛群）· Animals to watch（关注牛只）· Weather（天气）。修改单元格后保存并载入。',
+    en: 'Eleven sheets. Settings: Farm · Areas · Herds · Animals to watch · Weather. Records: Counts · Grassland · Cow positions · Herd days · Flights · Area boundaries.',
+    zh: '共 11 个工作表。设置：Farm · Areas · Herds · Animals to watch · Weather；记录：Counts（清点）· Grassland（草场）· Cow positions（牛只位置）· Herd days（牛群日报）· Flights（航次）· Area boundaries（草场边界）。',
+  },
+  dataDepth: { en: 'How much of the animal record to include', zh: '牛只记录的时间范围' },
+  dataLast14: { en: 'Last 14 days', zh: '最近 14 天' },
+  dataWholeSeason: { en: 'Whole season', zh: '整个牧季' },
+  dataRows: {
+    en: 'About {n} animal positions — every animal on every flight over {days} days.',
+    zh: '约 {n} 条牛只位置记录 —— {days} 天内每次航拍的每一头牛。',
+  },
+  dataSeasonSlow: {
+    en: 'A whole season is about 20 MB and takes half a minute to build, and as long again to load back.',
+    zh: '整个牧季约 20 MB，生成约需半分钟，重新载入耗时相当。',
+  },
+  dataWriting: { en: 'Building the file…', zh: '正在生成文件…' },
+  dataUsingRecords: {
+    en: 'Reading your records: {cows} animal positions, {counts} counts, {grass} grassland readings.',
+    zh: '正在使用你的记录：{cows} 条牛只位置、{counts} 条清点、{grass} 条草场观测。',
   },
   dataReading: { en: 'Reading the file…', zh: '正在读取文件…' },
   dataAdvanced: { en: 'For developers', zh: '开发者选项' },

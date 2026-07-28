@@ -27,6 +27,7 @@ npm run dev         # http://localhost:5173
 npm run build       # type-check + production bundle into dist/
 npm run standalone  # rebuild FarmersWingman.html + farm.json, the downloadable pair
 npm run make-farm   # regenerate src/data/farm.json from the model defaults
+npm run make-xlsx   # rebuild farm-data.xlsx (add `-- season` for all 303,600 rows)
 ```
 
 ## Changing the data — in Excel
@@ -40,7 +41,8 @@ Numbers, or LibreOffice) → change any cell → save → **Load your Excel file
 season from what you saved. **Back to the original data** undoes everything, and a badge in the
 header shows when your own data is in force.
 
-The workbook has five sheets:
+The workbook has eleven sheets in two halves. **Settings** are the handful of knobs a season is
+generated from:
 
 | Sheet | One row per | Try changing |
 |---|---|---|
@@ -50,17 +52,43 @@ The workbook has five sheets:
 | **Animals to watch** | flagged animal: *Lost* / *Needs attention* / *Drifted from the group* / *Health check* | add a row with a cow ID like `2-050` and the day it started |
 | **Weather** | day: rain, temperature, wind | set a wind above 11 m/s and that day's flight is grounded, the count carries over, and the alert follows |
 
-Add or delete rows freely — herds, areas and flagged animals are read from whatever rows are there.
-A sheet you leave alone keeps its current values, and a value that cannot work is refused with the
-sheet and row that caused it (*"Areas row 4: 'concrete' is not a grass type"*), leaving the current
-data untouched.
+**Records** are what the drone measured — the bulk of the file:
 
-Worked example: cutting Herd 1 from 405 to 150 cattle takes the registered total from 1,320 to 1,065
-on every screen; setting one day's wind to 14.2 m/s moves *last drone flight* back to the day before;
-renaming the farm changes the header.
+| Sheet | One row per | Rows | Read back? |
+|---|---|---|---|
+| **Cow positions** | animal, on every flight: latitude, longitude, ground height, area, seen yes/no, confidence %, metres from the herd, kilometres walked, hours still, flags | 34,320 for a fortnight · 303,600 for a season | **yes** |
+| **Grassland** | area, on every day: green index, standing grass kg/ha, grass eaten %, rest days, cattle per hectare, grazed hours, health score | 1,440 | **yes** |
+| **Counts** | herd, on every counting flight: on the books, counted, missing, confidence, flagged | 456 | **yes** |
+| **Herd days** | herd, on every day: kilometres walked and hours grazing / chewing / resting / walking / drinking, ground used, spread, water visits | 480 | no |
+| **Flights** | mission: status, minutes, hectares flown, images, battery, wind, temperature, areas covered | 240 | no |
+| **Area boundaries** | fence corner: latitude, longitude, height | 96 | no |
 
-**Under the bonnet** the app reads [`farm.json`](farm.json) (working copy: `src/data/farm.json`); the
-spreadsheet is a view onto it. *Data → For developers* downloads and loads the JSON directly.
+Add or delete rows freely — herds, areas, flagged animals and every record are read from whatever
+rows are there. A sheet you leave alone keeps its current values, and a value that cannot work is
+refused with the sheet and row that caused it (*"Areas row 4: 'concrete' is not a grass type"*),
+leaving the current data untouched.
+
+Where two sheets speak about the same thing, **the finer record wins**: per-animal rows settle the
+herd count, so the dashboard can never say a herd is complete while the map shows forty animals it
+did not see.
+
+Worked examples, all measured on the standalone file:
+
+- mark 40 animals of Herd 2 *Seen = no* on the last flight → *cattle detected* 1,319 → 1,279, and the
+  warning panel reads *"Herd 2 · 40 missing of 355"*
+- move one animal's latitude and longitude → that dot moves on the map, with its new GPS in its record
+- drop Area 3's green index to 0.05 → farm greenness 0.32 → 0.29 and another area reads *out of grass*
+- cut Herd 1 from 405 to 150 cattle → registered total 1,320 → 1,065 on every screen
+- set one day's wind to 14.2 m/s → *last drone flight* falls back to the day before
+
+**Size.** The animal record defaults to the **last 14 days** (34,320 rows, 2.5 MB). *Whole season* is
+303,600 rows and 21 MB: about 30 seconds to build and a minute to load back, and it is kept in
+IndexedDB rather than localStorage so there is no storage ceiling.
+
+**Under the bonnet** the settings live in [`farm.json`](farm.json) (working copy:
+`src/data/farm.json`) and the records are generated from them; a loaded workbook puts its settings
+in localStorage and its records in IndexedDB. *Data → For developers* downloads and loads the
+settings JSON directly.
 
 ## The three screens
 
@@ -119,15 +147,18 @@ Three things the demo is careful about, because each would cost a farmer a waste
 ```
 farm.json      the input database, next to FarmersWingman.html
 src/
-  data/        farm.json (input database), source.ts (loads it), workbook.ts (the Excel
-               view of it), ranch.ts (geography & herds), simulate.ts (the season),
-               animals.ts (individual animals)
+  data/        farm.json (settings), source.ts (loads them), store.ts (IndexedDB for the
+               records), records.ts (measurements that override the model),
+               workbookLayout.ts + recordSheets.ts (the Excel layout), workbook.ts
+               (reads a workbook back), ranch.ts (geography & herds), simulate.ts
+               (the season), animals.ts (individual animals)
   lib/         seeded PRNG, geometry, area status rules, the issue builder, formatting
   components/  HerdMap (terrain + animals), DataPanel (the data drawer), chart kit, UI atoms
   views/       TodayView · AlertsView · HistoryView
   i18n.tsx     EN/中文 dictionary, language + theme context
 scripts/
   make-farm.ts     regenerates src/data/farm.json
+  make-xlsx.ts     regenerates farm-data.xlsx
   standalone.mjs   inlines the build into FarmersWingman.html
 ```
 

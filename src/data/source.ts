@@ -1,14 +1,43 @@
 import defaultFarm from './farm.json';
+import { writeRecordStore } from './store';
 
 /**
  * The input database. `farm.json` ships with the app; a copy edited by hand can be loaded
  * from the Data menu and is kept in this browser, so the whole interface — counts, map,
  * grass, alerts, history — is recomputed from whatever file is in force.
  */
-export type Farm = typeof defaultFarm;
+export type Farm = typeof defaultFarm & {
+  /**
+   * What the drone measured, when a workbook supplies it. These are observations, not
+   * settings: where each animal was on each flight, what each herd counted, how green each
+   * area was. Absent by default — the app simulates them — and any subset may be given.
+   */
+  records?: {
+    counts?: {
+      day: number;
+      hour: number;
+      herdId: string;
+      detected: number;
+      confidencePct: number;
+      flagged: number;
+    }[];
+    grassland?: { day: number; areaId: string; ndvi: number; biomass: number }[];
+    cows?: {
+      day: number;
+      hour: number;
+      cowId: string;
+      herdId: string;
+      lat: number;
+      lon: number;
+      detected: boolean;
+      confidencePct: number;
+    }[];
+  };
+};
 
 const KEY = 'farmerswingman.farm';
 
+/** The settings are small enough to read synchronously, before anything derives from them. */
 function readOverride(): Farm | null {
   if (typeof localStorage === 'undefined') return null;
   try {
@@ -50,17 +79,33 @@ export function validateFarm(candidate: unknown): string | null {
   return null;
 }
 
-/** Store the edited database and reload, so every derived figure is rebuilt from it. */
-export function applyFarm(candidate: unknown) {
+/**
+ * Store the loaded database and reload, so every derived figure is rebuilt from it. The
+ * settings and the records part ways here: settings to localStorage, records to IndexedDB,
+ * because only one of the two is small.
+ */
+export async function applyFarm(candidate: unknown): Promise<string | null> {
   const problem = validateFarm(candidate);
   if (problem) return problem;
-  localStorage.setItem(KEY, JSON.stringify(candidate));
+  const { records, ...settings } = candidate as Farm;
+  try {
+    localStorage.setItem(KEY, JSON.stringify(settings));
+  } catch {
+    return 'this browser will not keep the settings';
+  }
+  const kept = await writeRecordStore(records ?? null);
+  if (kept) return kept;
   location.reload();
   return null;
 }
 
-export function resetFarm() {
-  localStorage.removeItem(KEY);
+export async function resetFarm() {
+  try {
+    localStorage.removeItem(KEY);
+  } catch {
+    /* nothing stored */
+  }
+  await writeRecordStore(null);
   location.reload();
 }
 

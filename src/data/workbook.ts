@@ -3,19 +3,26 @@ import writeXlsxFile from 'write-excel-file/browser';
 import defaultFarm from './farm.json';
 import { FARM, type Farm } from './source';
 import { ANIMAL_KINDS, areaNumber, SHEET, workbookSheets } from './workbookLayout';
+import { RECORD_SHEET, recordSheets, type Depth } from './recordSheets';
+import type { Dataset } from './types';
+
+export type { Depth };
 
 /**
- * The spreadsheet face of the database.
+ * The spreadsheet face of the data.
  *
  * `farm.json` is what the app reads, but almost nobody wants to edit JSON. This module
- * hands out the same information as an Excel workbook and reads an edited one back.
- * Anything a sheet does not mention keeps the value it had, so a farmer can change one
- * cell and leave the rest alone.
+ * hands out the same information as an Excel workbook — the settings that generate a
+ * season, and the records the season produced, down to one row per animal per flight —
+ * and reads an edited one back. Anything a sheet does not mention keeps the value it had,
+ * so a farmer can change one cell and leave the rest alone.
  */
 
-/** Build and download the workbook for the database currently in force. */
-export async function downloadWorkbook() {
-  await writeXlsxFile(workbookSheets(FARM)).toFile('farm-data.xlsx');
+/** Build and download the whole workbook: the settings, then the records. */
+export async function downloadWorkbook(data: Dataset, depth: Depth = 'fortnight') {
+  await writeXlsxFile([...workbookSheets(FARM), ...recordSheets(data, depth)]).toFile(
+    'farm-data.xlsx',
+  );
 }
 
 /* ------------------------------------------------------------------ reading */
@@ -224,6 +231,9 @@ export async function farmFromWorkbook(file: File): Promise<Farm> {
     }));
   }
 
+  // ---- the measurement sheets --------------------------------------------
+  farm.records = readRecords(get, farm);
+
   if (farm.weather.length < farm.season.days) {
     throw new WorkbookError(
       `the season is ${farm.season.days} days but Weather has ${farm.weather.length} rows`,
@@ -237,5 +247,89 @@ export async function farmFromWorkbook(file: File): Promise<Farm> {
   }
   farm.$readme = defaultFarm.$readme;
   return farm;
+}
+
+/**
+ * The three record sheets the app reads back. Herds and areas are named in the sheets, so
+ * a row is matched by name first and by position second — a renamed herd still lands.
+ * A row that names something that no longer exists is skipped rather than fatal: the
+ * records are a log, and a log of a herd you deleted is simply not about this farm.
+ */
+function readRecords(get: (name: string) => Rows | undefined, farm: Farm): Farm['records'] {
+  const idByName = (list: { id: string; name: { en: string } }[]) => {
+    const m = new Map<string, string>();
+    list.forEach((x, i) => {
+      m.set(norm(x.name.en), x.id);
+      m.set(norm(String(i + 1)), x.id);
+      m.set(norm(x.id), x.id);
+    });
+    return m;
+  };
+  const herdIds = idByName(farm.herds);
+  const areaIds = idByName(farm.areas);
+  const records: NonNullable<Farm['records']> = {};
+
+  // Counts: Date | Day | Hour | Herd | On the books | Counted | Missing | Confidence | Flagged
+  const counts = body(get(RECORD_SHEET.counts));
+  if (counts.length) {
+    records.counts = [];
+    for (const r of counts) {
+      const herdId = herdIds.get(norm(text(r[3])));
+      const day = num(r[1]);
+      const hour = num(r[2]);
+      const detected = num(r[5]);
+      if (herdId === undefined || day === null || hour === null || detected === null) continue;
+      records.counts.push({
+        day,
+        hour,
+        herdId,
+        detected,
+        confidencePct: num(r[7]) ?? 95,
+        flagged: num(r[8]) ?? 0,
+      });
+    }
+  }
+
+  // Grassland: Date | Day | Area | Hectares | Green index | Grass | ...
+  const grass = body(get(RECORD_SHEET.grassland));
+  if (grass.length) {
+    records.grassland = [];
+    for (const r of grass) {
+      const areaId = areaIds.get(norm(text(r[2])));
+      const day = num(r[1]);
+      const ndvi = num(r[4]);
+      const biomass = num(r[5]);
+      if (areaId === undefined || day === null || ndvi === null || biomass === null) continue;
+      records.grassland.push({ day, areaId, ndvi, biomass });
+    }
+  }
+
+  // Cow positions: Cow ID | Herd | Date | Day | Hour | Flight | Lat | Lon | ...
+  const cows = body(get(RECORD_SHEET.cows));
+  if (cows.length) {
+    records.cows = [];
+    for (const r of cows) {
+      const day = num(r[3]);
+      const hour = num(r[4]);
+      const lat = num(r[6]);
+      const lon = num(r[7]);
+      const cowId = text(r[0]);
+      if (!cowId || day === null || hour === null || lat === null || lon === null) continue;
+      records.cows.push({
+        day,
+        hour,
+        cowId,
+        // the herd follows from the ID itself ("3-201" is the 201st of Herd 3), so a
+        // renamed herd in the Herd column cannot split an animal from its own count
+        herdId: `H${cowId.split('-')[0]}`,
+        lat,
+        lon,
+        detected: !norm(text(r[10])).startsWith('n'),
+        confidencePct: num(r[11]) ?? 95,
+      });
+    }
+  }
+
+  return Object.keys(records).length ? records : undefined;
 }
 

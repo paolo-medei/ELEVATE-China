@@ -20,6 +20,7 @@ import {
   water,
 } from './ranch';
 import { FARM } from './source';
+import { countRecord, cowTally, grasslandRecord } from './records';
 import type {
   Alert,
   BehaviourState,
@@ -362,6 +363,11 @@ function simulatePasture(rng: Rng, herdDays: HerdDay[], weather: DayWeather[]): 
       }
       s.biomass = clamp(s.biomass + growth - offtake - s.biomass * senescence, 40, p.biomassCeiling);
 
+      // a measurement in the Grassland sheet is what the imagery saw: it replaces the
+      // modelled sward for that day, and the season carries on from there
+      const measured = grasslandRecord(day, p.id);
+      if (measured) s.biomass = clamp(measured.biomass, 40, p.biomassCeiling);
+
       // utilisation = season-to-date offtake against the forage that may safely be removed
       const utilization = utilizationOf(s.seasonOfftake, p);
       const relative = s.biomass / p.biomassCeiling;
@@ -374,11 +380,12 @@ function simulatePasture(rng: Rng, herdDays: HerdDay[], weather: DayWeather[]): 
       const greenUp = clamp(0.42 + (day - 4 - lateness * 9) / 30, 0.42, 1);
       const fade = clamp(1 - (day - (86 - lateness * 8)) / 46, 0.52, 1);
       const bare = clamp(1 - utilizationOf(s.seasonOfftake, p) * 0.22, 0.7, 1);
-      const ndvi = clamp(
+      const modelled = clamp(
         (0.1 + 0.68 * Math.pow(relative, 0.7)) * greenUp * fade * bare + rng.gauss(0, 0.006),
         0.05,
         0.92,
       );
+      const ndvi = measured ? clamp(measured.ndvi, 0, 1) : modelled;
       const restAdequacy = clamp(s.restDays / 30, 0, 1);
       const healthIndex = clamp(
         46 * clamp(relative / 0.75, 0, 1) +
@@ -457,12 +464,25 @@ function simulateFlights(rng: Rng, herdDays: HerdDay[], weather: DayWeather[]): 
             Math.round(expected * 0.82),
             expected,
           );
+          // What the flight reported, in order of how closely it was observed: the rows
+          // for individual animals first, then a herd count typed into the Counts sheet,
+          // then the model. The finest record wins so no two screens can disagree.
+          const perAnimal = cowTally(day, slot.hour, herd.id);
+          const recorded = countRecord(day, slot.hour, herd.id);
           detections.push({
             herdId: herd.id,
             expected,
-            detected,
-            confidencePct: +clamp(98.2 - missRate * 90 + rng.gauss(0, 0.5), 88, 99.4).toFixed(1),
-            flagged: rng.bool(0.22) ? rng.int(1, 3) : 0,
+            detected: perAnimal
+              ? clamp(perAnimal.seen, 0, expected)
+              : recorded
+                ? clamp(Math.round(recorded.detected), 0, expected)
+                : detected,
+            confidencePct: perAnimal
+              ? perAnimal.confidencePct
+              : recorded
+                ? recorded.confidencePct
+                : +clamp(98.2 - missRate * 90 + rng.gauss(0, 0.5), 88, 99.4).toFixed(1),
+            flagged: recorded ? Math.max(0, Math.round(recorded.flagged)) : rng.bool(0.22) ? rng.int(1, 3) : 0,
           });
         }
       }

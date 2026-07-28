@@ -91,7 +91,7 @@ export default function App() {
         </div>
       </header>
 
-      {dataOpen && <DataPanel onClose={() => setDataOpen(false)} />}
+      {dataOpen && <DataPanel data={data} onClose={() => setDataOpen(false)} />}
 
       <main className="main">
         {section === 'today' && <TodayView data={data} day={day} onDay={setDay} />}

@@ -1,5 +1,6 @@
 import { makeRng } from '../lib/rng';
-import { dist, pointInPolygon } from '../lib/geo';
+import { dist, fromLatLon, pointInPolygon } from '../lib/geo';
+import { cowRecord, cowTallyForDay } from './records';
 import { elevationAt, herds, LOST_ANIMALS, paddockById, RANCH_H, RANCH_W } from './ranch';
 import { FARM } from './source';
 import type { Dataset, Pt } from './types';
@@ -69,6 +70,10 @@ export const WELFARE: { cowId: string; fromDay: number }[] = FARM.animalEvents.w
  * already reported — so the individual view can never disagree with the herd totals.
  */
 function missedIds(data: Dataset, day: number, herdId: string): Set<string> {
+  // where the workbook names the animals it did not see, that list is the answer
+  const recorded = cowTallyForDay(day, herdId);
+  if (recorded) return recorded.missing;
+
   const det = data.flights
     .filter((f) => f.day === day)
     .flatMap((f) => f.detections)
@@ -166,9 +171,20 @@ export function cowSnapshot(data: Dataset, day: number, hour: number): CowState[
         };
       }
 
+      // a position typed into the Cow positions sheet is where the drone saw this animal
+      const fix = cowRecord(day, hour, cow.id);
+      if (fix) {
+        at = fromLatLon(
+          { lat: fix.lat, lon: fix.lon },
+          data.meta.origin,
+          data.meta.metresPerDegLat,
+          data.meta.metresPerDegLon,
+        );
+      }
+
       const fromHerdM = dist(at, step.at);
       const surveyed = det !== undefined;
-      const detected = surveyed && !gone.has(cow.id);
+      const detected = fix ? fix.detected : surveyed && !gone.has(cow.id);
 
       let lastSeenDaysAgo = 0;
       if (!detected) {
@@ -198,19 +214,21 @@ export function cowSnapshot(data: Dataset, day: number, hour: number): CowState[
         fromHerdM: Math.round(fromHerdM),
         detected,
         surveyed,
-        confidencePct: detected
-          ? +Math.min(
-              99.6,
-              Math.max(
-                70,
-                (det?.confidencePct ?? 95) +
-                  rng.gauss(0, 4.6) -
-                  // animals bunched in the middle of the mob overlap each other in frame
-                  (fromHerdM < step.spreadM * 0.35 ? 5.5 : 0) -
-                  (stillHours > 14 ? 2 : 0),
-              ),
-            ).toFixed(1)
-          : 0,
+        confidencePct: fix
+          ? fix.confidencePct
+          : detected
+            ? +Math.min(
+                99.6,
+                Math.max(
+                  70,
+                  (det?.confidencePct ?? 95) +
+                    rng.gauss(0, 4.6) -
+                    // animals bunched in the middle of the mob overlap each other in frame
+                    (fromHerdM < step.spreadM * 0.35 ? 5.5 : 0) -
+                    (stillHours > 14 ? 2 : 0),
+                ),
+              ).toFixed(1)
+            : 0,
         lastSeenDaysAgo,
         distanceKm: +((herdDay?.distanceKm ?? 0) * cow.activity).toFixed(2),
         stillHours: +stillHours.toFixed(1),

@@ -16,8 +16,8 @@ export const SHEET = {
   weather: 'Weather',
 } as const;
 
-const HEAD = { fontWeight: 'bold' as const, backgroundColor: '#e8eef5' };
-const NOTE = { color: '#666666', fontSize: 10 };
+export const HEAD = { fontWeight: 'bold' as const, backgroundColor: '#e8eef5' };
+export const NOTE = { color: '#666666', fontSize: 10 };
 
 /* ------------------------------------------------------------------ writing */
 
@@ -60,7 +60,7 @@ function animalRows(f: Farm) {
   return rows;
 }
 
-const header = (...cells: string[]) => cells.map((value) => ({ value, ...HEAD }));
+export const header = (...cells: string[]) => cells.map((value) => ({ value, ...HEAD }));
 
 /** The five sheets of the workbook, laid out from a database. */
 export function workbookSheets(f: Farm): Sheet[] {
