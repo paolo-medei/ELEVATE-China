@@ -302,7 +302,7 @@ export function RanchMap({
           return (
             <g key={`lbl-${p.id}`} pointerEvents="none">
               <text x={c.x} y={c.y - 4} textAnchor="middle" className="paddock-label">
-                {p.code} · {b(p.name)}
+                {b(p.name)}
               </text>
               <text x={c.x} y={c.y + 9} textAnchor="middle" className="paddock-sublabel">
                 {layer === 'status' && pd
@@ -449,7 +449,7 @@ export function RanchMap({
         <div className="map-chip">
           {layer === 'status' ? (
             <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              {(['move', 'spent', 'watch', 'ok', 'resting'] as const).map((st) => (
+              {(['outOfGrass', 'watch', 'ok', 'resting'] as const).map((st) => (
                 <span key={st} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                   <span
                     className="legend-swatch"

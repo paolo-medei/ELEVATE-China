@@ -5,25 +5,24 @@ import type { Alert, Dataset, PaddockDay, Severity } from '../data/types';
  * The plain-language layer. The detailed views expose the underlying numbers;
  * everything here answers "so what do I do about it?" in three states.
  */
-export type PaddockState = 'move' | 'spent' | 'watch' | 'ok' | 'resting';
+export type PaddockState = 'outOfGrass' | 'watch' | 'ok' | 'resting';
 
 export function paddockState(pd: PaddockDay): PaddockState {
   const p = paddockById.get(pd.paddockId)!;
   const grazed = pd.stockingAuHa > 0;
-  const spent = pd.utilization > 1 || pd.biomass < p.biomassCeiling * 0.32;
-  // a spent paddock with no stock on it needs to be left alone, not emptied
-  if (spent) return grazed ? 'move' : 'spent';
+  if (pd.utilization > 1 || pd.biomass < p.biomassCeiling * 0.32) return 'outOfGrass';
   if (pd.utilization > 0.85 || (grazed && pd.utilization > 0.7)) return 'watch';
   return grazed ? 'ok' : 'resting';
 }
 
 export const STATE_SEVERITY: Record<PaddockState, Severity> = {
-  move: 'critical',
-  spent: 'serious',
+  outOfGrass: 'critical',
   watch: 'warning',
   ok: 'good',
   resting: 'good',
 };
+
+export const isGrazed = (pd: PaddockDay) => pd.stockingAuHa > 0;
 
 /** Grass left in the paddock, as a share of what the site grows at its best. */
 export const grassLeft = (pd: PaddockDay) =>
@@ -75,43 +74,52 @@ export function actionsForDay(data: Dataset, day: number): Action[] {
     switch (a.kind) {
       case 'fenceBreach':
         text = {
-          en: `Check the fence at ${paddock?.en ?? '—'} — the ${herd?.en ?? 'herd'} walked out`,
+          en: `Check the fence at ${paddock?.en ?? '—'} — ${herd?.en ?? 'the herd'} walked out`,
           zh: `检查${paddock?.zh ?? ''}围栏——${herd?.zh ?? '牛群'}已走出`,
         };
         break;
       case 'countMismatch':
         text = {
-          en: `Go and find the missing cattle in the ${herd?.en ?? 'herd'}`,
+          en: `Go and find the missing cattle in ${herd?.en ?? 'the herd'}`,
           zh: `寻找${herd?.zh ?? '牛群'}中未清点的牛只`,
         };
         break;
       case 'animalWelfare':
         text = {
-          en: `Look over the flagged animals in the ${herd?.en ?? 'herd'}`,
+          en: `Look over the flagged animals in ${herd?.en ?? 'the herd'}`,
           zh: `复查${herd?.zh ?? '牛群'}中标记异常的牛只`,
         };
         break;
       case 'waterGap':
         text = {
-          en: `Check the water point for the ${herd?.en ?? 'herd'}`,
+          en: `Check the water point for ${herd?.en ?? 'the herd'}`,
           zh: `检查${herd?.zh ?? '牛群'}所在草场的水点`,
         };
         break;
-      case 'overgrazing':
-        text = {
-          en: `Move stock off ${paddock?.en ?? 'this paddock'} — the grass is spent`,
-          zh: `将牛群转出${paddock?.zh ?? '该草场'}——牧草已用尽`,
-        };
+      case 'overgrazing': {
+        const grazedNow = data.paddockDays.some(
+          (pd) => pd.day === day && pd.paddockId === a.paddockId && pd.stockingAuHa > 0,
+        );
+        text = grazedNow
+          ? {
+              en: `Move the herd out of ${paddock?.en ?? 'this area'} — the grass is used up`,
+              zh: `将牛群转出${paddock?.zh ?? '该草场'}——牧草已用尽`,
+            }
+          : {
+              en: `Leave ${paddock?.en ?? 'this area'} alone — its grass is used up for the season`,
+              zh: `${paddock?.zh ?? '该草场'}本季牧草已用尽，暂勿放牧`,
+            };
         break;
+      }
       case 'heatStress':
         text = {
-          en: `Hot day — check shade and water for the ${herd?.en ?? 'herd'}`,
+          en: `Hot day — check shade and water for ${herd?.en ?? 'the herd'}`,
           zh: `高温天气——为${herd?.zh ?? '牛群'}检查遮阴与饮水`,
         };
         break;
       default:
         text = {
-          en: `Give ${paddock?.en ?? 'this paddock'} a longer rest before grazing it again`,
+          en: `Give ${paddock?.en ?? 'this area'} a longer rest before grazing it again`,
           zh: `${paddock?.zh ?? '该草场'}再次放牧前应延长休牧`,
         };
     }

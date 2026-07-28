@@ -173,7 +173,7 @@ export function GrasslandView({ data, day, onDay }: { data: Dataset; day: number
                 return (
                   <tr key={pd.paddockId}>
                     <td className="strong">
-                      {p.code} · {b(p.name)}
+                      {b(p.name)}
                     </td>
                     <td>{fmt(p.areaHa)}</td>
                     <td>{fmt(pd.biomass)}</td>
@@ -244,7 +244,7 @@ export function GrasslandView({ data, day, onDay }: { data: Dataset; day: number
               const over = v > p.carryingCapacityAuHa;
               return {
                 key: p.id,
-                label: `${p.code} ${b(p.name)}`,
+                label: b(p.name),
                 value: v,
                 target: p.carryingCapacityAuHa,
                 color: over ? 'var(--critical)' : SERIES_VAR(1),

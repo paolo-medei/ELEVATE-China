@@ -39,18 +39,18 @@ const capacityFor = (soil: SoilClass) =>
   +((CEILING[soil] * ALLOWABLE_USE) / (INTAKE_KG_AU_DAY * SEASON_DAYS)).toFixed(3);
 
 const PADDOCK_SPEC: { name: { en: string; zh: string }; soil: SoilClass }[] = [
-  { name: { en: 'North Ridge', zh: '北梁' }, soil: 'typical' },
-  { name: { en: 'Spring Hollow', zh: '泉子沟' }, soil: 'meadow' },
-  { name: { en: 'Elm Flat', zh: '榆树滩' }, soil: 'typical' },
-  { name: { en: 'Wind Gap', zh: '风口' }, soil: 'sandy' },
-  { name: { en: 'Sand Camp', zh: '沙窝子' }, soil: 'sandy' },
-  { name: { en: 'Stone Well', zh: '石头井' }, soil: 'typical' },
-  { name: { en: 'Salt Lick Flat', zh: '碱滩' }, soil: 'typical' },
-  { name: { en: 'Willow Draw', zh: '柳条沟' }, soil: 'meadow' },
-  { name: { en: 'River Bend', zh: '河湾' }, soil: 'meadow' },
-  { name: { en: 'South Meadow', zh: '南草甸' }, soil: 'meadow' },
-  { name: { en: 'Old Corral', zh: '老圈滩' }, soil: 'sandy' },
-  { name: { en: 'Horse Flat', zh: '马场滩' }, soil: 'typical' },
+  { name: { en: 'Area 1', zh: '1 号草场' }, soil: 'typical' },
+  { name: { en: 'Area 2', zh: '2 号草场' }, soil: 'meadow' },
+  { name: { en: 'Area 3', zh: '3 号草场' }, soil: 'typical' },
+  { name: { en: 'Area 4', zh: '4 号草场' }, soil: 'sandy' },
+  { name: { en: 'Area 5', zh: '5 号草场' }, soil: 'sandy' },
+  { name: { en: 'Area 6', zh: '6 号草场' }, soil: 'typical' },
+  { name: { en: 'Area 7', zh: '7 号草场' }, soil: 'typical' },
+  { name: { en: 'Area 8', zh: '8 号草场' }, soil: 'meadow' },
+  { name: { en: 'Area 9', zh: '9 号草场' }, soil: 'meadow' },
+  { name: { en: 'Area 10', zh: '10 号草场' }, soil: 'meadow' },
+  { name: { en: 'Area 11', zh: '11 号草场' }, soil: 'sandy' },
+  { name: { en: 'Area 12', zh: '12 号草场' }, soil: 'typical' },
 ];
 
 /**
@@ -119,7 +119,7 @@ function buildPaddocks(): Paddock[] {
       const areaHa = shoelaceArea(polygon) / 10_000;
       paddocks.push({
         id: `P${idx + 1}`,
-        code: `P${String(idx + 1).padStart(2, '0')}`,
+        code: `A${idx + 1}`,
         name: spec.name,
         polygon,
         centroid: polygonCentroid(polygon),
@@ -166,7 +166,7 @@ export const landmarks: Landmark[] = [
 export const herds: Herd[] = [
   {
     id: 'H1',
-    name: { en: 'North Ridge cows', zh: '北梁基础母牛群' },
+    name: { en: 'Herd 1', zh: '1 号牛群' },
     breed: { en: 'Simmental × Mongolian', zh: '西门塔尔×蒙古牛' },
     head: 540,
     auPerHead: 1.0,
@@ -175,7 +175,7 @@ export const herds: Herd[] = [
   },
   {
     id: 'H2',
-    name: { en: 'Spring Hollow cows', zh: '泉子沟母牛群' },
+    name: { en: 'Herd 2', zh: '2 号牛群' },
     breed: { en: 'Angus × Mongolian', zh: '安格斯×蒙古牛' },
     head: 470,
     auPerHead: 1.0,
@@ -184,7 +184,7 @@ export const herds: Herd[] = [
   },
   {
     id: 'H3',
-    name: { en: 'Yearling heifers', zh: '育成母牛群' },
+    name: { en: 'Herd 3', zh: '3 号牛群' },
     breed: { en: 'Simmental cross', zh: '西门塔尔杂交' },
     head: 400,
     auPerHead: 0.7,
@@ -193,7 +193,7 @@ export const herds: Herd[] = [
   },
   {
     id: 'H4',
-    name: { en: 'Calving group', zh: '产犊母牛群' },
+    name: { en: 'Herd 4', zh: '4 号牛群' },
     breed: { en: 'Mongolian', zh: '蒙古牛' },
     head: 345,
     auPerHead: 1.15,

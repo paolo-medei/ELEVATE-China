@@ -16,8 +16,9 @@ npm run build    # type-check + production bundle into dist/
 ## The demo scenario
 
 **Bayan Gol Demonstration Ranch · 巴彦郭勒示范牧场**, Xilingol League, Inner Mongolia.
-6,987 ha split into 12 fenced paddocks across meadow, typical and sandy steppe; 1,755 head of
-cattle in 4 herds; one warm-season grazing period, **1 June – 28 September 2026** (120 days).
+6,987 ha split into 12 fenced areas across meadow, typical and sandy steppe; 1,755 head of
+cattle in 4 herds. Areas and herds are named plainly — **Area 1–12**, **Herd 1–4** — so nothing has
+to be memorised to read the screen. one warm-season grazing period, **1 June – 28 September 2026** (120 days).
 Two drone sorties a day: a dawn muster count over the occupied paddocks, an evening sweep that
 cycles through the resting ones.
 
@@ -26,9 +27,13 @@ Bilingual throughout (English / 中文) with light and dark themes — both swit
 ## Two ways in
 
 The app opens on **Today** — one screen that answers "is everything alright?" before it shows a
-single chart: a plain-language headline, four tiles, a traffic-light map, a ranked to-do list, and
-grass-left-per-paddock. Every item explains itself in a sentence, and tapping a job reveals the
-reading behind it. No jargon, no charts to interpret.
+single chart: a plain-language headline, three tiles, a traffic-light map, a ranked to-do list, and only the
+areas that need watching — the rest collapse into one line. Every item explains itself in a
+sentence, and tapping a job reveals the reading behind it. No jargon, no charts to interpret.
+
+Areas carry one of four states: **out of grass**, **nearly used up**, **plenty of grass**,
+**resting**. The state is the colour on the map and the badge in the list; what to do about it is
+the to-do list's job, so the same colour never has to mean two different actions.
 
 **Full dashboard** switches to the four analyst views below, for when someone wants the numbers.
 

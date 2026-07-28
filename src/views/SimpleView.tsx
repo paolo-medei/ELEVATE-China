@@ -4,7 +4,7 @@ import { Card, Meter, StatTile, StatusBadge } from '../components/ui';
 import { Sparkline } from '../components/charts';
 import { RanchMap } from '../components/RanchMap';
 import { paddockById, TOTAL_HEAD } from '../data/ranch';
-import { actionsForDay, grassLeft, paddockState, STATE_SEVERITY } from '../lib/status';
+import { actionsForDay, paddockState, STATE_SEVERITY } from '../lib/status';
 import { fmt, SERIES_VAR, STATUS_VAR } from '../lib/format';
 import type { Dataset } from '../data/types';
 
@@ -36,18 +36,10 @@ export function SimpleView({
   const missing = counts ? counts.surveyed - counts.detected : null;
   const actions = useMemo(() => actionsForDay(data, day), [data, day]);
   const dayRows = useMemo(() => data.paddockDays.filter((pd) => pd.day === day), [data.paddockDays, day]);
-  const outOfGrass = dayRows.filter((pd) => ['move', 'spent'].includes(paddockState(pd)));
-
-  const grazingHours = useMemo(() => {
-    const rows = data.herdDays.filter((hd) => hd.day === day);
-    const head = rows.reduce((a, hd) => a + data.herds.find((h) => h.id === hd.herdId)!.head, 0);
-    return (
-      rows.reduce((a, hd) => {
-        const herd = data.herds.find((h) => h.id === hd.herdId)!;
-        return a + (hd.budget.grazing / 60) * herd.head;
-      }, 0) / Math.max(1, head)
-    );
-  }, [data.herdDays, data.herds, day]);
+  const outOfGrass = dayRows.filter((pd) => paddockState(pd) === 'outOfGrass');
+  const needWatching = [...dayRows]
+    .filter((pd) => ['outOfGrass', 'watch'].includes(paddockState(pd)))
+    .sort((a, b2) => b2.utilization - a.utilization);
 
   const seenTrend = useMemo(
     () =>
@@ -136,30 +128,19 @@ export function SimpleView({
           foot={t('simpleNeedsYouFoot')}
           badge={
             <StatusBadge severity={actions[0]?.severity ?? 'good'}>
-              {actions.length ? t(actions[0].severity === 'critical' ? 'state_move' : 'ruleWatch') : t('rulePassed')}
+              {actions.length ? t('ruleWatch') : t('rulePassed')}
             </StatusBadge>
           }
         />
         <StatTile
           label={t('simpleMovePaddocks')}
           value={outOfGrass.length}
-          foot={t('simpleMoveFoot')}
+          foot={t('simpleMoveFoot', { n: dayRows.length })}
           badge={
-            <StatusBadge severity={outOfGrass.length ? 'serious' : 'good'}>
+            <StatusBadge severity={outOfGrass.length ? 'critical' : 'good'}>
               {outOfGrass.length
-                ? outOfGrass.map((pd) => paddockById.get(pd.paddockId)!.code).join(' ')
+                ? outOfGrass.map((pd) => paddockById.get(pd.paddockId)!.name[lang]).join(', ')
                 : t('rulePassed')}
-            </StatusBadge>
-          }
-        />
-        <StatTile
-          label={t('simpleGrazing')}
-          value={grazingHours.toFixed(1)}
-          unit={t('hours')}
-          foot={t('simpleGrazingNormal')}
-          badge={
-            <StatusBadge severity={grazingHours >= 9 ? 'good' : grazingHours >= 7.5 ? 'warning' : 'serious'}>
-              {grazingHours >= 9 ? t('rulePassed') : t('ruleWatch')}
             </StatusBadge>
           }
         />
@@ -229,9 +210,7 @@ export function SimpleView({
         </Card>
         <Card title={t('grassTableTitle')} sub={t('simpleFootnote')} flush>
           <div className="list" style={{ maxHeight: 380 }}>
-            {[...dayRows]
-              .sort((a, b2) => b2.utilization - a.utilization)
-              .map((pd) => {
+            {needWatching.map((pd) => {
                 const p = paddockById.get(pd.paddockId)!;
                 const state = paddockState(pd);
                 const grazedBy = data.herdDays.find(
@@ -240,15 +219,15 @@ export function SimpleView({
                 return (
                   <div className="grass-row" key={pd.paddockId}>
                     <span className={`rail ${STATE_SEVERITY[state]}`} aria-hidden="true" />
-                    <span style={{ minWidth: 120, flex: '1 1 120px' }}>
+                    <span style={{ minWidth: 110, flex: '1 1 110px' }}>
                       <span className="row-title">{b(p.name)}</span>
                       <span className="row-meta">
                         {grazedBy
-                          ? `${b(data.herds.find((h) => h.id === grazedBy.herdId)!.name)}`
+                          ? b(data.herds.find((h) => h.id === grazedBy.herdId)!.name)
                           : t('restingFor', { n: pd.restDays })}
                       </span>
                     </span>
-                    <span style={{ flex: '1 1 120px', minWidth: 110 }}>
+                    <span style={{ flex: '1 1 130px', minWidth: 120 }}>
                       <span
                         className="row-meta"
                         style={{ marginTop: 0, justifyContent: 'space-between' }}
@@ -263,9 +242,6 @@ export function SimpleView({
                         target={1}
                         color={STATUS_VAR[STATE_SEVERITY[state]]}
                       />
-                      <span className="row-meta">
-                        {t('grassLeft')} {Math.round(grassLeft(pd) * 100)}%
-                      </span>
                     </span>
                     <span style={{ flex: '0 0 auto' }}>
                       <StatusBadge severity={STATE_SEVERITY[state]}>
@@ -273,8 +249,13 @@ export function SimpleView({
                       </StatusBadge>
                     </span>
                   </div>
-                );
-              })}
+              );
+            })}
+            {needWatching.length < dayRows.length && (
+              <div className="grass-row note">
+                {t('grassAllFine', { n: dayRows.length - needWatching.length })}
+              </div>
+            )}
           </div>
         </Card>
         </div>
@@ -301,7 +282,6 @@ export function SimpleView({
                     <div className="row-detail">
                       {fmt(h.head)} {t('head')}
                       {paddock && ` · ${b(paddock.name)}`}
-                      {step && ` · ${t(step.state)}`}
                     </div>
                     <div className="row-meta">
                       {det ? (

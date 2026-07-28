@@ -147,7 +147,7 @@ export function GovernanceView({ data, day, onDay }: { data: Dataset; day: numbe
                 const v = meanStocking.get(p.id) ?? 0;
                 return {
                   key: p.id,
-                  label: `${p.code} ${b(p.name)}`,
+                  label: b(p.name),
                   value: v,
                   target: p.carryingCapacityAuHa,
                   color: v > p.carryingCapacityAuHa ? STATUS_VAR.critical : SERIES_VAR(1),
@@ -185,7 +185,7 @@ export function GovernanceView({ data, day, onDay }: { data: Dataset; day: numbe
               const p = paddockById.get(pd.paddockId)!;
               return {
                 key: p.id,
-                label: `${p.code} ${b(p.name)}`,
+                label: b(p.name),
                 value: pd.healthIndex,
                 color: STATUS_VAR[healthSeverity(pd.healthIndex)],
                 valueLabel: String(pd.healthIndex),

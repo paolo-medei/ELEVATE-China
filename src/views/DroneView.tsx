@@ -114,7 +114,7 @@ export function DroneView({ data, day, onDay }: { data: Dataset; day: number; on
               const stale = c.lastSeen ?? 99;
               return {
                 key: p.id,
-                label: `${p.code} ${b(p.name)}`,
+                label: b(p.name),
                 value: c.days,
                 color:
                   stale <= 3 ? STATUS_VAR.good : stale <= 6 ? STATUS_VAR.warning : STATUS_VAR.critical,
