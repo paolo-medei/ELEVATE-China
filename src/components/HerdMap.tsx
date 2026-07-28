@@ -44,12 +44,11 @@ const TURGEN_GORGE: Pt[] = [
 ];
 
 const RESERVOIR: Pt[] = [
-  { x: 11000, y: 4600 },
-  { x: 10050, y: 5000 },
-  { x: 9550, y: 5560 },
-  { x: 9700, y: 6100 },
-  { x: 10250, y: 6600 },
-  { x: 11000, y: 6700 },
+  { x: 11200, y: 5150 },
+  { x: 10620, y: 5560 },
+  { x: 10480, y: 6060 },
+  { x: 10780, y: 6620 },
+  { x: 11200, y: 6700 },
 ];
 
 /** ridge crests drawn as chevron runs, the way a hiking map shows relief */
@@ -344,32 +343,35 @@ export function HerdMap({
           {t('assyRiver')}
         </text>
 
-        {/* every animal of the chosen herd */}
-        {herdFilter &&
-          cowStates.map((c) => {
-            const sel = selectedCow === c.cow.id;
-            const q = px(c.at);
-            const colour = !c.detected
+        {/* every animal, always — this is what makes the map read as live */}
+        {cowStates.map((c) => {
+          const sel = selectedCow === c.cow.id;
+          const q = px(c.at);
+          // zoomed into one herd the useful colour is detection confidence; across the
+          // whole plateau it is which herd the animal belongs to
+          const colour = !herdFilter
+            ? SERIES_VAR(Number(c.cow.herdId.slice(1)))
+            : !c.detected
               ? STATUS_VAR.critical
               : c.confidencePct >= 95
                 ? STATUS_VAR.good
                 : c.confidencePct >= 85
                   ? STATUS_VAR.warning
                   : STATUS_VAR.serious;
-            return (
-              <circle
-                key={c.cow.id}
-                cx={q.x}
-                cy={q.y}
-                r={(sel ? 5 : 2.4) * k}
-                fill={c.detected ? colour : 'none'}
-                stroke={c.detected ? (sel ? '#fff' : 'rgba(0,0,0,0.5)') : STATUS_VAR.critical}
-                strokeWidth={(sel ? 2 : c.detected ? 0.5 : 1.2) * k}
-                style={{ cursor: 'pointer' }}
-                onClick={() => onSelectCow?.(sel ? null : c.cow.id)}
-              />
-            );
-          })}
+          return (
+            <circle
+              key={c.cow.id}
+              cx={q.x}
+              cy={q.y}
+              r={(sel ? 5 : herdFilter ? 2.4 : 1.7) * k}
+              fill={c.detected ? colour : 'none'}
+              stroke={c.detected ? (sel ? '#fff' : 'rgba(0,0,0,0.5)') : STATUS_VAR.critical}
+              strokeWidth={(sel ? 2 : c.detected ? 0.4 : 1.2) * k}
+              style={{ cursor: 'pointer' }}
+              onClick={() => onSelectCow?.(sel ? null : c.cow.id)}
+            />
+          );
+        })}
 
         {/* herd markers */}
         {!herdFilter &&
@@ -381,23 +383,26 @@ export function HerdMap({
                 <circle
                   cx={q.x}
                   cy={q.y}
-                  r={(s.spreadM * SCALE) / 2}
+                  r={(s.spreadM * SCALE) / 2 + 4}
                   fill={SERIES_VAR(Number(herd.color.slice(1)))}
-                  fillOpacity={0.18}
+                  fillOpacity={0.14}
+                  stroke={SERIES_VAR(Number(herd.color.slice(1)))}
+                  strokeOpacity={0.5}
+                  strokeWidth={1}
                 />
                 <circle
                   cx={q.x}
-                  cy={q.y}
-                  r={13}
+                  cy={q.y - 26}
+                  r={11}
                   fill={SERIES_VAR(Number(herd.color.slice(1)))}
                   stroke="#fff"
                   strokeWidth={2}
                 />
                 <text
                   x={q.x}
-                  y={q.y + 4.5}
+                  y={q.y - 22}
                   textAnchor="middle"
-                  style={{ fill: '#fff', fontSize: 13, fontWeight: 700 }}
+                  style={{ fill: '#fff', fontSize: 12, fontWeight: 700 }}
                 >
                   {herd.id.slice(1)}
                 </text>

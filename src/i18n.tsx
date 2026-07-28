@@ -19,6 +19,12 @@ const DICT = {
   warnTitle: { en: '{n} things need your attention today', zh: '今日有 {n} 项需要处理' },
   warnMissing: { en: 'Cattle missing, by herd', zh: '各牛群缺失情况' },
   warnMissingN: { en: '{n} missing of {all}', zh: '{all} 头中缺 {n} 头' },
+  warnAllPresent: { en: 'All {n} present', zh: '{n} 头全部在场' },
+  warnSeparatedN: { en: '{n} temporarily apart', zh: '{n} 头暂时离群' },
+  mapPlayHint: {
+    en: 'Press play to watch the animals move through the day.',
+    zh: '点击播放，观看牛群一天中的移动。',
+  },
   warnUrgent: { en: 'Needs a person today', zh: '今日须派人查看' },
   warnNoUrgent: { en: 'No animal is isolated or lying still.', zh: '无离群或长时间静止的牛只。' },
   warnUrgentDetail: { en: '{m} m from the herd · still for {h} h', zh: '离群 {m} 米 · 静止 {h} 小时' },
@@ -27,8 +33,8 @@ const DICT = {
   needCheck: { en: 'To check', zh: '待查看' },
   herdLongGone: { en: 'Missing for days', zh: '多日未见' },
   mapAllSub: {
-    en: 'Each herd is one marker; animals needing a person are circled. Pick a herd to see every animal.',
-    zh: '每个牛群一个标记，需查看的牛只用圆圈标出。选择牛群可查看每一头牛。',
+    en: 'Every animal is a dot, coloured by herd. Animals needing a person are circled and named.',
+    zh: '每头牛为一个圆点，按牛群着色；需查看的牛只用圆圈标出并标注编号。',
   },
   turgenGorge: { en: 'Turgen Gorge', zh: '图尔根峡谷' },
   bartogai: { en: 'Bartogai Reservoir', zh: '巴尔托盖水库' },
@@ -47,8 +53,8 @@ const DICT = {
   histVsTwoWeeks: { en: '{now} today vs {then} two weeks ago', zh: '今日 {now} 头，两周前 {then} 头' },
   histGreenGrid: { en: 'Green Index by area, through the season', zh: '各草场植被指数变化' },
   histGreenGridSub: {
-    en: 'Each column is ten days — click one to jump the dashboard to it',
-    zh: '每列为 10 天，点击可跳转至该时段',
+    en: 'Each column is fifteen days — click one to jump the dashboard to it',
+    zh: '每列为 15 天，点击可跳转至该时段',
   },
   histMonths: { en: 'Month by month', zh: '各月汇总' },
   histMonth: { en: 'Month', zh: '月份' },
@@ -100,6 +106,7 @@ const DICT = {
   flag_isolated: { en: 'Away from the group', zh: '离群' },
   flag_stationary: { en: 'Not moving enough', zh: '活动过少' },
   flag_sick: { en: 'Possibly sick', zh: '疑似患病' },
+  flag_separated: { en: 'Drifted from the group', zh: '暂时离群' },
 
   // alerts page
   alertsPageSub: { en: 'Every animal the system wants a person to look at', zh: '需人工复核的牛只' },

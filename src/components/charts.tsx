@@ -7,12 +7,14 @@ import { useUi } from '../i18n';
 
 const SEQ = ['#cde2fb', '#9ec5f4', '#6da7ec', '#3987e5', '#256abf', '#184f95', '#0d366b'];
 
-/** one-hue green ramp, for the vegetation index where the hue itself carries meaning */
-const GREEN = ['#e6f0d4', '#c8e0a8', '#a3cd79', '#7ab353', '#559338', '#367326', '#1f5219'];
+/**
+ * Vegetation ramp: dry straw through to deep green. Unlike the abstract sequential ramp
+ * this one is not reversed for dark mode — bare ground really is the pale end.
+ */
+const GREEN = ['#d9cfa2', '#c6cd85', '#a6c56e', '#82b356', '#5d9a3e', '#3f7d2b', '#26601d'];
 
 export function useGreenRamp() {
-  const { theme } = useUi();
-  return theme === 'light' ? GREEN : [...GREEN].reverse();
+  return GREEN;
 }
 
 export function useRamp() {

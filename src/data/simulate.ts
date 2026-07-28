@@ -2,8 +2,10 @@ import { clamp, makeRng, type Rng } from '../lib/rng';
 import { dist, pointInPolygon } from '../lib/geo';
 import {
   ALLOWABLE_USE,
+  elevationAt,
   INTAKE_KG_AU_DAY,
   landmarks,
+  lostOn,
   M_PER_DEG_LAT,
   M_PER_DEG_LON,
   ORIGIN,
@@ -305,6 +307,10 @@ function simulateHerds(rng: Rng, schedule: Map<string, string[]>, weather: DayWe
   return { steps, herdDays };
 }
 
+/** season offtake as a share of what the area can safely give up */
+const utilizationOf = (offtake: number, p: { biomassCeiling: number }) =>
+  clamp(offtake / (p.biomassCeiling * ALLOWABLE_USE), 0, 2);
+
 function simulatePasture(rng: Rng, herdDays: HerdDay[], weather: DayWeather[]): PaddockDay[] {
   const out: PaddockDay[] = [];
   const state = new Map(
@@ -355,10 +361,22 @@ function simulatePasture(rng: Rng, herdDays: HerdDay[], weather: DayWeather[]): 
       s.biomass = clamp(s.biomass + growth - offtake - s.biomass * senescence, 40, p.biomassCeiling);
 
       // utilisation = season-to-date offtake against the forage that may safely be removed
-      const allowable = p.biomassCeiling * ALLOWABLE_USE;
-      const utilization = clamp(s.seasonOfftake / allowable, 0, 2);
+      const utilization = utilizationOf(s.seasonOfftake, p);
       const relative = s.biomass / p.biomassCeiling;
-      const ndvi = clamp(0.12 + 0.62 * Math.pow(relative, 0.75) + rng.gauss(0, 0.008), 0.05, 0.92);
+      /*
+       * Vegetation index is not just standing crop: an area 500 m higher greens up two
+       * weeks later and browns off earlier, and a hard-grazed sward shows bare ground.
+       * That is what gives each area its own curve through the season.
+       */
+      const lateness = (elevationAt(p.centroid) - 1980) / 260; // ~0 low, ~2 on the ridges
+      const greenUp = clamp(0.42 + (day - 4 - lateness * 9) / 30, 0.42, 1);
+      const fade = clamp(1 - (day - (86 - lateness * 8)) / 46, 0.52, 1);
+      const bare = clamp(1 - utilizationOf(s.seasonOfftake, p) * 0.22, 0.7, 1);
+      const ndvi = clamp(
+        (0.1 + 0.68 * Math.pow(relative, 0.7)) * greenUp * fade * bare + rng.gauss(0, 0.006),
+        0.05,
+        0.92,
+      );
       const restAdequacy = clamp(s.restDays / 30, 0, 1);
       const healthIndex = clamp(
         46 * clamp(relative / 0.75, 0, 1) +
@@ -418,13 +436,15 @@ function simulateFlights(rng: Rng, herdDays: HerdDay[], weather: DayWeather[]): 
           const herd = herds.find((h) => h.id === hd.herdId)!;
           const expected = herd.head;
           // occlusion: tall grass, calves lying down, animals bunched under shade
-          let missRate = 0.012 + (hd.meanSpreadM < 160 ? 0.014 : 0) + (herd.id === 'H4' ? 0.02 : 0);
-          if (w.tempC > 32) missRate += 0.012;
+          // a complete low-altitude pass over an open plateau finds nearly every animal;
+          // what actually costs a count is a shortened mission or a herd on the move
+          let missRate = 0.0012 + (hd.meanSpreadM < 160 ? 0.0025 : 0);
+          if (w.tempC > 32) missRate += 0.002;
           if (partial) missRate += 0.03;
           const breachDay = BREACHES.some((b) => b.herdId === herd.id && b.day === day);
           if (breachDay) missRate += 0.075;
           const detected = clamp(
-            Math.round(expected * (1 - missRate) + rng.gauss(0, 1.1)),
+            expected - Math.round(expected * missRate) - lostOn(herd.id, day).length,
             Math.round(expected * 0.82),
             expected,
           );
@@ -432,7 +452,7 @@ function simulateFlights(rng: Rng, herdDays: HerdDay[], weather: DayWeather[]): 
             herdId: herd.id,
             expected,
             detected,
-            confidencePct: +clamp(97.4 - missRate * 120 + rng.gauss(0, 0.6), 88, 99.4).toFixed(1),
+            confidencePct: +clamp(98.2 - missRate * 90 + rng.gauss(0, 0.5), 88, 99.4).toFixed(1),
             flagged: rng.bool(0.22) ? rng.int(1, 3) : 0,
           });
         }

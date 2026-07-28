@@ -8,8 +8,8 @@ import { dateForDay } from '../data/simulate';
 import { fmt, SERIES_VAR } from '../lib/format';
 import type { Dataset, Flight } from '../data/types';
 
-/** Ten-day blocks: fine enough to see the season turn, coarse enough to read. */
-const BLOCK = 10;
+/** Fifteen-day blocks: eight columns across the season. */
+const BLOCK = 15;
 
 export function HistoryView({ data, day, onDay }: { data: Dataset; day: number; onDay: (d: number) => void }) {
   const { t, b, lang } = useUi();
@@ -181,7 +181,7 @@ export function HistoryView({ data, day, onDay }: { data: Dataset; day: number; 
           cols={blocks}
           labelWidth={72}
           cellH={20}
-          colTickEvery={2}
+          colTickEvery={1}
           valueAt={(rowKey, colKey) => greenAt(rowKey, Number(colKey))}
           colorAt={(v) => rampColor(ramp, Math.max(0, Math.min(1, (v - 0.2) / 0.6)))}
           format={(v) => v.toFixed(2)}

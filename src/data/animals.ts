@@ -1,6 +1,6 @@
 import { makeRng } from '../lib/rng';
 import { dist, pointInPolygon } from '../lib/geo';
-import { herds, paddockById, RANCH_H, RANCH_W } from './ranch';
+import { elevationAt, herds, LOST_ANIMALS, paddockById, RANCH_H, RANCH_W } from './ranch';
 import type { Dataset, Pt } from './types';
 
 /** One ear-tagged animal. IDs read "1-042": herd number, then the animal's number in it. */
@@ -29,7 +29,7 @@ export const cows: Cow[] = herds.flatMap((herd, hi) => {
 export const cowsByHerd = new Map(herds.map((h) => [h.id, cows.filter((c) => c.herdId === h.id)]));
 export const cowById = new Map(cows.map((c) => [c.id, c]));
 
-export type CowFlag = 'notFound' | 'isolated' | 'stationary' | 'sick';
+export type CowFlag = 'notFound' | 'isolated' | 'stationary' | 'sick' | 'separated';
 
 export type CowState = {
   cow: Cow;
@@ -37,6 +37,8 @@ export type CowState = {
   /** metres from the centre of its own herd */
   fromHerdM: number;
   detected: boolean;
+  /** false when no mission covered this herd today — absence proves nothing */
+  surveyed: boolean;
   confidencePct: number;
   /** days since the drone last picked this animal out; 0 = seen today */
   lastSeenDaysAgo: number;
@@ -52,10 +54,18 @@ const hash = (herdId: string, day: number) => herdId.charCodeAt(1) * 7919 + day 
  * Animals that genuinely go missing and stay missing — the case the whole system exists
  * for. Everything else that fails to show up is ordinary day-to-day occlusion.
  */
-const LOST: { cowId: string; fromDay: number }[] = [
-  { cowId: '3-201', fromDay: 74 },
-  { cowId: '2-118', fromDay: 96 },
-  { cowId: '1-455', fromDay: 111 },
+const LOST = LOST_ANIMALS;
+
+/** Two animals that have drifted off the mob but are still walking and grazing normally. */
+const SEPARATED: { cowId: string; fromDay: number; awayM: number; side: number }[] = [
+  { cowId: '4-090', fromDay: 115, awayM: 760, side: 300 },
+  { cowId: '4-166', fromDay: 117, awayM: 690, side: -240 },
+];
+
+/** Animals the imagery flagged for how they move. */
+const WELFARE: { cowId: string; fromDay: number }[] = [
+  { cowId: '1-077', fromDay: 114 },
+  { cowId: '3-140', fromDay: 117 },
 ];
 
 /**
@@ -73,8 +83,9 @@ function missedIds(data: Dataset, day: number, herdId: string): Set<string> {
   if (gap <= 0) return new Set();
 
   const out = new Set<string>();
+  // a lost animal is missing whatever the rest of the count says
   for (const l of LOST) {
-    if (day >= l.fromDay && roster.some((c) => c.id === l.cowId) && out.size < gap) out.add(l.cowId);
+    if (day >= l.fromDay && roster.some((c) => c.id === l.cowId)) out.add(l.cowId);
   }
 
   // the rest is occlusion: mostly luck of the frame, nudged by how edgy the animal is
@@ -116,14 +127,12 @@ export function cowSnapshot(data: Dataset, day: number, hour: number): CowState[
       .find((d) => d.herdId === herd.id);
     const gone = missed(data, day, herd.id);
 
-    // the mission's own welfare count decides how many animals get a behaviour flag
-    const flaggedCount = det?.flagged ?? 0;
     const roster = cowsByHerd.get(herd.id)!;
-    const flagRng = makeRng(hash(herd.id, day) + 31);
-    const flagged = new Set<string>();
-    for (let i = 0; i < flaggedCount; i++) {
-      flagged.add(roster[Math.floor(flagRng.next() * roster.length)].id);
-    }
+    const flagged = new Set(
+      WELFARE.filter((wf) => day >= wf.fromDay && roster.some((c) => c.id === wf.cowId)).map(
+        (wf) => wf.cowId,
+      ),
+    );
 
     for (const cow of roster) {
       const rng = makeRng(
@@ -148,19 +157,22 @@ export function cowSnapshot(data: Dataset, day: number, hour: number): CowState[
       }
 
       const attention = ATTENTION.find((a) => a.cowId === cow.id && day >= a.fromDay);
-      if (attention) {
+      const separated = SEPARATED.find((a) => a.cowId === cow.id && day >= a.fromDay);
+      const drift = attention ?? separated;
+      if (drift) {
         // drift toward the middle of the plateau so the animal is always on the map
         const dx = RANCH_W / 2 - step.at.x;
         const dy = RANCH_H / 2 - step.at.y;
         const len = Math.hypot(dx, dy) || 1;
         at = {
-          x: step.at.x + (dx / len) * attention.awayM - (dy / len) * attention.side,
-          y: step.at.y + (dy / len) * attention.awayM + (dx / len) * attention.side,
+          x: step.at.x + (dx / len) * drift.awayM - (dy / len) * drift.side,
+          y: step.at.y + (dy / len) * drift.awayM + (dx / len) * drift.side,
         };
       }
 
       const fromHerdM = dist(at, step.at);
-      const detected = !gone.has(cow.id);
+      const surveyed = det !== undefined;
+      const detected = surveyed && !gone.has(cow.id);
 
       let lastSeenDaysAgo = 0;
       if (!detected) {
@@ -177,9 +189,11 @@ export function cowSnapshot(data: Dataset, day: number, hour: number): CowState[
           ? ((herdDay.budget.resting + herdDay.budget.ruminating) / 60) * (2 - cow.activity)
           : 0;
       const flags: CowFlag[] = [];
-      if (!detected) flags.push('notFound');
-      if (attention || fromHerdM > step.spreadM * 1.15) flags.push('isolated');
-      if (stillHours > 15.5) flags.push('stationary');
+      if (surveyed && !detected) flags.push('notFound');
+      if (attention) flags.push('isolated');
+      else if (separated) flags.push('separated');
+      // only genuinely abnormal stillness counts; a long rest in the heat is normal
+      if (stillHours > 18) flags.push('stationary');
       if (flagged.has(cow.id)) flags.push('sick');
 
       out.push({
@@ -187,6 +201,7 @@ export function cowSnapshot(data: Dataset, day: number, hour: number): CowState[
         at,
         fromHerdM: Math.round(fromHerdM),
         detected,
+        surveyed,
         confidencePct: detected
           ? +Math.min(
               99.6,
@@ -216,6 +231,7 @@ export const FLAG_SEVERITY: Record<CowFlag, 'critical' | 'serious' | 'warning'> 
   sick: 'serious',
   isolated: 'warning',
   stationary: 'warning',
+  separated: 'warning',
 };
 
 /** Missing once is a shadow under a tree; missing for days is a lost animal. */
@@ -227,22 +243,7 @@ export function cowSeverity(state: CowState): 'critical' | 'serious' | 'warning'
   return FLAG_SEVERITY[state.flags[0]];
 }
 
-/**
- * Ground height in metres. The Assy Plateau floor sits near 1,900 m and rises to the
- * Zailiysky Alatau ridges in the south and the observatory shoulder in the north-west.
- */
-const HILLS = [
-  { x: 1700, y: 900, r: 2500, h: 690 }, // observatory shoulder
-  { x: 5400, y: 6600, r: 3200, h: 640 }, // Alatau ridge, south
-  { x: 9600, y: 1100, r: 2600, h: 430 }, // north-east ridge
-  { x: 7600, y: 3200, r: 2200, h: 180 },
-];
-
-export const elevationAt = (p: Pt) =>
-  Math.round(
-    1905 +
-      HILLS.reduce((a, h) => a + h.h * Math.exp(-((p.x - h.x) ** 2 + (p.y - h.y) ** 2) / (2 * h.r ** 2)), 0),
-  );
+export { elevationAt };
 
 /**
  * The two animals the demo is built around: they drift away from Herd 1 and stop moving,
@@ -272,7 +273,7 @@ export function attentionByDay(data: Dataset): DayAttention[] {
     const counted = data.flights.some((f) => f.day === day && f.detections.length > 0);
     return {
       day,
-      missing: counted ? states.filter((c) => !c.detected).length : null,
+      missing: counted ? states.filter((c) => c.surveyed && !c.detected).length : null,
       needCheck: states.filter((c) => c.flags.some((f) => f !== 'notFound')).length,
       isolated: has('isolated'),
       stationary: has('stationary'),

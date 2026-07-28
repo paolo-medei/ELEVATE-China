@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useUi } from '../i18n';
 import { HerdMap } from '../components/HerdMap';
 import { Segmented } from '../components/ui';
@@ -25,8 +25,21 @@ export function TodayView({
   const { t, b, lang } = useUi();
   const [herdFilter, setHerdFilter] = useState<string | null>(null);
   const [selectedCow, setSelectedCow] = useState<string | null>(null);
+  const [hour, setHour] = useState(SNAPSHOT_HOUR);
+  const [playing, setPlaying] = useState(false);
 
+  // the numbers on this page belong to the morning count; only the map moves with the hour
   const cows = useMemo(() => cowSnapshot(data, day, SNAPSHOT_HOUR), [data, day]);
+  const mapCows = useMemo(
+    () => (hour === SNAPSHOT_HOUR ? cows : cowSnapshot(data, day, hour)),
+    [cows, data, day, hour],
+  );
+
+  useEffect(() => {
+    if (!playing) return;
+    const id = window.setInterval(() => setHour((h) => (h + 1) % 24), 700);
+    return () => window.clearInterval(id);
+  }, [playing]);
   const issues = useMemo(() => buildIssues(data, day, cows), [data, day, cows]);
 
   const detections = data.flights.filter((f) => f.day === day).flatMap((f) => f.detections);
@@ -45,10 +58,17 @@ export function TodayView({
   );
   const missingByHerd = data.herds.map((h) => ({
     herd: h,
-    missing: cows.filter((c) => c.cow.herdId === h.id && !c.detected).length,
+    missing: cows.filter((c) => c.cow.herdId === h.id && c.surveyed && !c.detected).length,
+    separated: cows.filter((c) => c.cow.herdId === h.id && c.flags.includes('separated')).length,
   }));
 
-  const shown = herdFilter ? cows.filter((c) => c.cow.herdId === herdFilter) : cows;
+  const shown = herdFilter ? mapCows.filter((c) => c.cow.herdId === herdFilter) : mapCows;
+  const mapHighlight = mapCows.filter(
+    (c) =>
+      c.flags.includes('isolated') &&
+      c.flags.includes('stationary') &&
+      (!herdFilter || c.cow.herdId === herdFilter),
+  );
   const selected = selectedCow ? cows.find((c) => c.cow.id === selectedCow) : null;
 
   const gpsOf = (p: { x: number; y: number }) =>
@@ -96,15 +116,21 @@ export function TodayView({
           <div className="warn-block">
             <h2 className="warn-block-title">{t('warnMissing')}</h2>
             <ul className="warn-list">
-              {missingByHerd.map(({ herd, missing }) => (
+              {missingByHerd.map(({ herd, missing, separated }) => (
                 <li key={herd.id}>
                   <span
                     className="warn-dot"
                     style={{ background: SERIES_VAR(Number(herd.color.slice(1))) }}
                   />
                   <span className="warn-herd">{b(herd.name)}</span>
-                  <span className={`warn-num ${missing === 0 ? 'ok' : missing > 4 ? 'bad' : 'warn'}`}>
-                    {missing === 0 ? t('bigAllHere') : t('warnMissingN', { n: missing, all: herd.head })}
+                  <span
+                    className={`warn-num ${missing > 0 ? 'bad' : separated > 0 ? 'warn' : 'ok'}`}
+                  >
+                    {missing > 0
+                      ? t('warnMissingN', { n: missing, all: herd.head })
+                      : separated > 0
+                        ? t('warnSeparatedN', { n: separated })
+                        : t('warnAllPresent', { n: herd.head })}
                   </span>
                 </li>
               ))}
@@ -203,13 +229,47 @@ export function TodayView({
         <HerdMap
           data={data}
           day={day}
-          hour={SNAPSHOT_HOUR}
+          hour={hour}
           herdFilter={herdFilter}
           cowStates={shown}
-          highlight={attention.filter((c) => !herdFilter || c.cow.herdId === herdFilter)}
+          highlight={mapHighlight}
           selectedCow={selectedCow}
           onSelectCow={setSelectedCow}
         />
+
+        <div className="hour-row">
+          <button
+            type="button"
+            className="play-btn"
+            onClick={() => setPlaying(!playing)}
+            aria-label={playing ? t('pause') : t('play')}
+          >
+            {playing ? (
+              <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                <rect x="1" y="1" width="3.5" height="10" rx="1" fill="currentColor" />
+                <rect x="7.5" y="1" width="3.5" height="10" rx="1" fill="currentColor" />
+              </svg>
+            ) : (
+              <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                <path d="M2 1.2 L11 6 L2 10.8 Z" fill="currentColor" />
+              </svg>
+            )}
+          </button>
+          <label htmlFor="hour-slider">{t('hour')}</label>
+          <input
+            id="hour-slider"
+            type="range"
+            min={0}
+            max={23}
+            value={hour}
+            onChange={(e) => {
+              setPlaying(false);
+              setHour(Number(e.target.value));
+            }}
+          />
+          <span className="hour-readout">{String(hour).padStart(2, '0')}:00</span>
+        </div>
+        <p className="big-sub">{t('mapPlayHint')}</p>
 
         {selected && (
           <div className="cow-detail">
@@ -279,13 +339,10 @@ export function TodayView({
           <p className="big-nothing">✓ {t('bigNothing')}</p>
         ) : (
           <ol className="big-jobs">
-            {issues.slice(0, 4).map((issue) => (
+            {issues.slice(0, 6).map((issue) => (
               <li key={issue.id} className={`big-job ${issue.severity}`}>
                 <span className="big-job-dot" aria-hidden="true" />
-                <span>
-                  {b(issue.action)}
-                  {issue.gps && <span className="mono gps block">{issue.gps}</span>}
-                </span>
+                <span>{b(issue.task)}</span>
               </li>
             ))}
           </ol>
@@ -300,13 +357,15 @@ export function TodayView({
             const step = data.stepIndex[day][SNAPSHOT_HOUR].find((s) => s.herdId === h.id);
             const hd = data.herdDays.find((x) => x.day === day && x.herdId === h.id);
             const herdCows = cows.filter((c) => c.cow.herdId === h.id);
-            const missing = herdCows.filter((c) => !c.detected).length;
+            const missing = herdCows.filter((c) => c.surveyed && !c.detected).length;
             const needsCheck = herdCows.filter((c) => c.flags.some((f) => f !== 'notFound')).length;
             const area = step ? paddockById.get(step.paddockId)! : null;
             const urgent = herdCows.filter(
               (c) => c.flags.includes('isolated') && c.flags.includes('stationary'),
             ).length;
-            const longGone = herdCows.filter((c) => !c.detected && c.lastSeenDaysAgo >= 3).length;
+            const longGone = herdCows.filter(
+              (c) => c.surveyed && !c.detected && c.lastSeenDaysAgo >= 3,
+            ).length;
             const light =
               urgent > 0 || longGone > 0
                 ? STATUS_VAR.critical

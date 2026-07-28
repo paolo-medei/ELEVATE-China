@@ -142,6 +142,26 @@ function buildPaddocks(): Paddock[] {
 export const paddocks = buildPaddocks();
 export const paddockById = new Map(paddocks.map((p) => [p.id, p]));
 
+/**
+ * Ground height in metres. The plateau floor sits near 1,900 m and rises to the Zailiysky
+ * Alatau ridges in the south and the observatory shoulder in the north-west.
+ */
+const HILLS = [
+  { x: 1700, y: 900, r: 2500, h: 690 },
+  { x: 5400, y: 6600, r: 3200, h: 640 },
+  { x: 9600, y: 1100, r: 2600, h: 430 },
+  { x: 7600, y: 3200, r: 2200, h: 180 },
+];
+
+export const elevationAt = (p: Pt) =>
+  Math.round(
+    1905 +
+      HILLS.reduce(
+        (a, h) => a + h.h * Math.exp(-((p.x - h.x) ** 2 + (p.y - h.y) ** 2) / (2 * h.r ** 2)),
+        0,
+      ),
+  );
+
 export const riverPath: Pt[] = [
   { x: -200, y: 5020 },
   { x: 1400, y: 5420 },
@@ -205,6 +225,17 @@ export const herds: Herd[] = [
     rotation: ['P4', 'P8', 'P12'],
   },
 ];
+
+/**
+ * Animals that have genuinely gone missing and stay missing. The flight count subtracts
+ * them and the per-animal view marks them, so both tell the same story.
+ */
+export const LOST_ANIMALS: { cowId: string; herdId: string; fromDay: number }[] = [
+  { cowId: '3-201', herdId: 'H3', fromDay: 74 },
+];
+
+export const lostOn = (herdId: string, day: number) =>
+  LOST_ANIMALS.filter((l) => l.herdId === herdId && day >= l.fromDay);
 
 export const herdById = new Map(herds.map((h) => [h.id, h]));
 export const TOTAL_HEAD = herds.reduce((a, h) => a + h.head, 0);
