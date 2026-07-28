@@ -37,11 +37,16 @@ export type Farm = typeof defaultFarm & {
 
 const KEY = 'farmerswingman.farm';
 
-/** The settings are small enough to read synchronously, before anything derives from them. */
+/**
+ * The settings are small enough to read synchronously, before anything derives from them.
+ *
+ * Every touch of localStorage sits inside the try, including the test for whether it is
+ * there: a browser set to block site data throws on the property itself, and this runs
+ * while the app is still being imported, so an escaping error means a blank page.
+ */
 function readOverride(): Farm | null {
-  if (typeof localStorage === 'undefined') return null;
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = globalThis.localStorage?.getItem(KEY);
     return raw ? (JSON.parse(raw) as Farm) : null;
   } catch {
     return null;

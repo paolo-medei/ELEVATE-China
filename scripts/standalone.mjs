@@ -54,6 +54,27 @@ ${fs.readFileSync(path.join(dist, css), 'utf8')}
 </head>
 <body>
 <div id="root"></div>
+<script>
+/* Last resort: an error while the module is still being evaluated happens before any of
+   the app's own handlers exist, and would otherwise leave nothing but a white page. */
+(function () {
+  var shown = false;
+  function show(what) {
+    if (shown) return;
+    var root = document.getElementById('root');
+    if (!root || root.childElementCount > 0) return;
+    shown = true;
+    root.innerHTML =
+      '<div style="max-width:34rem;margin:12vh auto;padding:0 1.5rem;font:15px/1.6 system-ui,sans-serif;color:#ddd">' +
+      '<h1 style="font-size:1.15rem;margin:0 0 .6rem">Farmers&rsquo; Wingman could not start</h1>' +
+      '<p style="margin:0 0 .8rem">Try reloading. If it keeps happening, this browser may be blocking site data for this page.</p>' +
+      '<pre style="white-space:pre-wrap;font-size:12px;opacity:.6;margin:0">' + what + '</pre></div>';
+  }
+  addEventListener('error', function (e) { show(e.message || String(e.error)); });
+  addEventListener('unhandledrejection', function (e) { show(String(e.reason)); });
+  addEventListener('load', function () { setTimeout(function () { show('The page loaded but nothing was drawn.'); }, 8000); });
+})();
+</script>
 <script type="module">
 ${script}
 </script>
