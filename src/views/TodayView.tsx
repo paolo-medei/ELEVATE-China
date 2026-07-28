@@ -42,11 +42,12 @@ export function TodayView({
   }, [playing]);
   const issues = useMemo(() => buildIssues(data, day, cows), [data, day, cows]);
 
-  const detections = data.flights.filter((f) => f.day === day).flatMap((f) => f.detections);
-  const seen = detections.reduce((a, d) => a + d.detected, 0);
+  // when the wind grounds the fleet the count carries over, so the tile always reports the
+  // flight named beside it rather than dropping to zero
   const lastFlight = [...data.flights]
     .filter((f) => f.day <= day && f.detections.length > 0)
     .pop();
+  const seen = (lastFlight?.detections ?? []).reduce((a, d) => a + d.detected, 0);
 
   const herdDays = data.herdDays.filter((hd) => hd.day === day);
   const walked = herdDays.reduce((a, hd) => a + hd.distanceKm, 0) / Math.max(1, herdDays.length);

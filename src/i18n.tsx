@@ -15,6 +15,26 @@ const DICT = {
     zh: '演示数据 · 模拟牧季',
   },
 
+  // the input database
+  dataMenu: { en: 'Data', zh: '数据' },
+  dataTitle: { en: 'Input database', zh: '输入数据库' },
+  dataIntro: {
+    en: 'Everything on screen is calculated from one file, farm.json. Download it, change a value, load it back, and the whole app follows.',
+    zh: '页面上的全部内容都由 farm.json 一个文件计算得出。下载文件、修改数值、再载入，全站结果即随之更新。',
+  },
+  dataDownload: { en: 'Download farm.json', zh: '下载 farm.json' },
+  dataLoad: { en: 'Load an edited file', zh: '载入修改后的文件' },
+  dataReset: { en: 'Back to the original file', zh: '恢复原始文件' },
+  dataCustom: { en: 'Edited database in use', zh: '正在使用修改后的数据库' },
+  dataOriginal: { en: 'Original database in use', zh: '正在使用原始数据库' },
+  dataBadge: { en: 'Edited data', zh: '已改数据' },
+  dataHint: {
+    en: 'Try: herds[0].head, areas[4].pasture (meadow / typical / sandy), weather[119].windMs, or animalEvents.',
+    zh: '可尝试修改：herds[0].head、areas[4].pasture（meadow / typical / sandy）、weather[119].windMs 或 animalEvents。',
+  },
+  dataBad: { en: 'File not loaded: {why}', zh: '文件未载入：{why}' },
+  close: { en: 'Close', zh: '关闭' },
+
   // warning panel
   warnTitle: { en: '{n} things need your attention today', zh: '今日有 {n} 项需要处理' },
   warnMissing: { en: 'Cattle missing, by herd', zh: '各牛群缺失情况' },

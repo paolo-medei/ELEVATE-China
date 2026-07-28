@@ -1,5 +1,6 @@
 import { makeRng } from '../lib/rng';
 import { polygonCentroid, shoelaceArea } from '../lib/geo';
+import { FARM } from './source';
 import type { Herd, Landmark, Paddock, Pt, SoilClass, WaterPoint } from './types';
 
 /**
@@ -7,35 +8,32 @@ import type { Herd, Landmark, Paddock, Pt, SoilClass, WaterPoint } from './types
  * between the Turgen Gorge to the north-west and the Bartogai Reservoir to the east.
  * A classic summer pasture (jailau) at 1,900–2,700 m, grazed June to September.
  */
-export const RANCH_W = 10800;
-export const RANCH_H = 6480;
+export const RANCH_W = FARM.meta.widthM;
+export const RANCH_H = FARM.meta.heightM;
 
-export const ORIGIN = { lat: 43.2814, lon: 77.7396 }; // NW corner of the study area
+export const ORIGIN = { lat: FARM.meta.originLat, lon: FARM.meta.originLon };
 export const M_PER_DEG_LAT = 111_320;
-export const M_PER_DEG_LON = 81_060; // cos(43.25°) * 111.32 km
+export const M_PER_DEG_LON =
+  Math.cos((FARM.meta.originLat * Math.PI) / 180) * M_PER_DEG_LAT;
 
-const COLS = 4;
-const ROWS = 3;
+const COLS = FARM.meta.gridCols;
+const ROWS = FARM.meta.gridRows;
 
 /** Length of the warm-season grazing period, in days. */
-export const SEASON_DAYS = 120;
+export const SEASON_DAYS = FARM.season.days;
 /** Dry-matter intake per animal unit per day, including trampling and fouling losses. */
-export const INTAKE_KG_AU_DAY = 11.5;
+export const INTAKE_KG_AU_DAY = FARM.forage.intakeKgPerAnimalPerDay;
 /**
  * Share of peak standing crop that may be removed across a season — about half of the
  * edible yield, which is itself roughly 60% of what is standing.
  */
-export const ALLOWABLE_USE = 0.3;
+export const ALLOWABLE_USE = FARM.forage.allowableUse;
 
 /**
  * Peak standing crop per pasture type on the plateau, kg dry matter / ha. Alpine meadow
  * on the valley floors is the productive ground; the stony slopes carry far less.
  */
-const CEILING: Record<SoilClass, number> = {
-  meadow: 2250,
-  typical: 1550,
-  sandy: 780,
-};
+const CEILING: Record<SoilClass, number> = FARM.forage.peakGrassKgPerHa;
 
 /**
  * Carrying capacity follows from the forage budget rather than being asserted separately:
@@ -44,27 +42,16 @@ const CEILING: Record<SoilClass, number> = {
 const capacityFor = (soil: SoilClass) =>
   +((CEILING[soil] * ALLOWABLE_USE) / (INTAKE_KG_AU_DAY * SEASON_DAYS)).toFixed(3);
 
-const PADDOCK_SPEC: { name: { en: string; zh: string }; soil: SoilClass }[] = [
-  { name: { en: 'Area 1', zh: '1 号草场' }, soil: 'typical' },
-  { name: { en: 'Area 2', zh: '2 号草场' }, soil: 'meadow' },
-  { name: { en: 'Area 3', zh: '3 号草场' }, soil: 'typical' },
-  { name: { en: 'Area 4', zh: '4 号草场' }, soil: 'typical' },
-  { name: { en: 'Area 5', zh: '5 号草场' }, soil: 'sandy' },
-  { name: { en: 'Area 6', zh: '6 号草场' }, soil: 'typical' },
-  { name: { en: 'Area 7', zh: '7 号草场' }, soil: 'typical' },
-  { name: { en: 'Area 8', zh: '8 号草场' }, soil: 'meadow' },
-  { name: { en: 'Area 9', zh: '9 号草场' }, soil: 'meadow' },
-  { name: { en: 'Area 10', zh: '10 号草场' }, soil: 'meadow' },
-  { name: { en: 'Area 11', zh: '11 号草场' }, soil: 'meadow' },
-  { name: { en: 'Area 12', zh: '12 号草场' }, soil: 'typical' },
-];
+const PADDOCK_SPEC: { name: { en: string; zh: string }; soil: SoilClass }[] = FARM.areas.map(
+  (a) => ({ name: a.name, soil: a.pasture as SoilClass }),
+);
 
 /**
  * Fence lines are built from one shared vertex/midpoint lattice so neighbouring
  * paddocks share their boundary exactly — no slivers, no overlaps.
  */
 function buildPaddocks(): Paddock[] {
-  const rng = makeRng(20260615);
+  const rng = makeRng(FARM.meta.layoutSeed);
   const cw = RANCH_W / COLS;
   const ch = RANCH_H / ROWS;
   const jx = cw * 0.11;
@@ -173,66 +160,42 @@ export const riverPath: Pt[] = [
   { x: 11000, y: 6420 },
 ];
 
-export const water: WaterPoint[] = [
-  { id: 'W1', name: { en: 'Assy River ford', zh: '阿瑟河渡口' }, kind: 'river', at: { x: 2450, y: 4560 } },
-  { id: 'W2', name: { en: 'North spring', zh: '北泉' }, kind: 'pond', at: { x: 3980, y: 1320 } },
-  { id: 'W3', name: { en: 'Kuray spring', zh: '库赖泉' }, kind: 'pond', at: { x: 6900, y: 2680 } },
-  { id: 'W4', name: { en: 'Assy River bend', zh: '阿瑟河湾' }, kind: 'river', at: { x: 5600, y: 5180 } },
-  { id: 'W5', name: { en: 'Bartogai inlet', zh: '巴尔托盖水库入口' }, kind: 'river', at: { x: 9750, y: 5450 } },
-]
+export const water: WaterPoint[] = FARM.waterPoints.map((w) => ({
+  id: w.id,
+  name: w.name,
+  kind: w.kind as WaterPoint['kind'],
+  at: { x: w.x, y: w.y },
+}));
 
-export const landmarks: Landmark[] = [
-  { id: 'L1', name: { en: 'Summer camp', zh: '夏季牧点' }, kind: 'camp', at: { x: 4980, y: 4230 } },
-  { id: 'L2', name: { en: 'Drone pad', zh: '无人机起降点' }, kind: 'dronePad', at: { x: 5240, y: 4090 } },
-  { id: 'L3', name: { en: 'Assy-Turgen Observatory', zh: '阿瑟-图尔根天文台' }, kind: 'handling', at: { x: 1850, y: 980 } },
-]
+export const landmarks: Landmark[] = FARM.places.map((l) => ({
+  id: l.id,
+  name: l.name,
+  kind: l.kind as Landmark['kind'],
+  at: { x: l.x, y: l.y },
+}));
 
-export const herds: Herd[] = [
-  {
-    id: 'H1',
-    name: { en: 'Herd 1', zh: '1 号牛群' },
-    breed: { en: 'Simmental × Mongolian', zh: '西门塔尔×蒙古牛' },
-    head: 405,
-    auPerHead: 1.0,
-    color: 'h1',
-    rotation: ['P1', 'P5', 'P9'],
-  },
-  {
-    id: 'H2',
-    name: { en: 'Herd 2', zh: '2 号牛群' },
-    breed: { en: 'Angus × Mongolian', zh: '安格斯×蒙古牛' },
-    head: 355,
-    auPerHead: 1.0,
-    color: 'h2',
-    rotation: ['P2', 'P6', 'P10'],
-  },
-  {
-    id: 'H3',
-    name: { en: 'Herd 3', zh: '3 号牛群' },
-    breed: { en: 'Simmental cross', zh: '西门塔尔杂交' },
-    head: 300,
-    auPerHead: 0.7,
-    color: 'h3',
-    rotation: ['P3', 'P7', 'P11'],
-  },
-  {
-    id: 'H4',
-    name: { en: 'Herd 4', zh: '4 号牛群' },
-    breed: { en: 'Mongolian', zh: '蒙古牛' },
-    head: 260,
-    auPerHead: 1.15,
-    color: 'h4',
-    rotation: ['P4', 'P8', 'P12'],
-  },
-];
+export const herds: Herd[] = FARM.herds.map((h, i) => ({
+  id: h.id,
+  name: h.name,
+  breed: { en: '', zh: '' },
+  head: h.head,
+  auPerHead: h.animalUnitsPerHead,
+  color: `h${i + 1}`,
+  rotation: h.rotation,
+}));
+
+/** how long each herd stays in one area, and where its cycle starts */
+export const ROTATION = FARM.herds.map((h) => ({
+  daysPerArea: h.daysPerArea,
+  offset: h.rotationOffset,
+}));
 
 /**
  * Animals that have genuinely gone missing and stay missing. The flight count subtracts
  * them and the per-animal view marks them, so both tell the same story.
  */
-export const LOST_ANIMALS: { cowId: string; herdId: string; fromDay: number }[] = [
-  { cowId: '3-201', herdId: 'H3', fromDay: 74 },
-];
+export const LOST_ANIMALS: { cowId: string; herdId: string; fromDay: number }[] =
+  FARM.animalEvents.lost;
 
 export const lostOn = (herdId: string, day: number) =>
   LOST_ANIMALS.filter((l) => l.herdId === herdId && day >= l.fromDay);

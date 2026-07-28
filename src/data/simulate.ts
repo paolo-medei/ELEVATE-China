@@ -14,10 +14,12 @@ import {
   QUOTA_SHEEP_UNITS,
   RANCH_H,
   RANCH_W,
+  ROTATION,
   SEASON_DAYS,
   herds,
   water,
 } from './ranch';
+import { FARM } from './source';
 import type {
   Alert,
   BehaviourState,
@@ -31,9 +33,9 @@ import type {
   Pt,
 } from './types';
 
-/** One warm-season grazing period: 1 June – 28 September. */
+/** One warm-season grazing period, taken from the database (1 June – 28 September). */
 export const DAYS = SEASON_DAYS;
-export const START_DATE = new Date(Date.UTC(2026, 5, 1));
+export const START_DATE = new Date(`${FARM.season.startDate}T00:00:00Z`);
 
 export const dateForDay = (day: number) => {
   const d = new Date(START_DATE.getTime() + day * 86_400_000);
@@ -102,7 +104,7 @@ const reachableTowards = (centroid: Pt, target: Pt, poly: Pt[]): Pt => {
 const WINDY_DAYS = new Set([12, 41, 63, 88, 109]);
 const GUSTY_DAYS = new Set([7, 29, 55, 74, 96, 113]);
 
-function buildWeather(rng: Rng): DayWeather[] {
+export function buildWeather(rng: Rng): DayWeather[] {
   const out: DayWeather[] = [];
   for (let day = 0; day < DAYS; day++) {
     // Xilingol gets ~70% of its rain in the July–August monsoon peak
@@ -139,13 +141,13 @@ function buildWeather(rng: Rng): DayWeather[] {
 
 /** Which paddock each herd occupies on each day (simple deferred-rotation grazing plan). */
 function buildRotation() {
-  const periods = [13, 12, 14, 11];
-  const offsets = [0, 4, 7, 2];
   const schedule = new Map<string, string[]>();
   herds.forEach((h, i) => {
+    const period = Math.max(1, ROTATION[i].daysPerArea);
+    const offset = ROTATION[i].offset;
     const days: string[] = [];
     for (let day = 0; day < DAYS; day++) {
-      const blockIndex = Math.floor((day + offsets[i]) / periods[i]);
+      const blockIndex = Math.floor((day + offset) / period);
       days.push(h.rotation[blockIndex % h.rotation.length]);
     }
     schedule.set(h.id, days);
@@ -403,18 +405,25 @@ function simulatePasture(rng: Rng, herdDays: HerdDay[], weather: DayWeather[]): 
   return out;
 }
 
+/**
+ * Flight times come from the database. The first mission of the day is the muster count —
+ * it flies the occupied areas and produces the head counts; later ones sweep the resting
+ * ground, so adding an hour to `flights.hours` adds a pasture check, not a second count.
+ */
+const FLIGHT_SLOTS = FARM.flights.hours.map((hour, i) => ({
+  hour,
+  kind: (i === 0 ? 'muster' : 'pasture') as 'muster' | 'pasture',
+}));
+
 function simulateFlights(rng: Rng, herdDays: HerdDay[], weather: DayWeather[]): Flight[] {
   const flights: Flight[] = [];
   for (let day = 0; day < DAYS; day++) {
     const w = weather[day];
     const occupied = herdDays.filter((hd) => hd.day === day);
 
-    for (const slot of [
-      { hour: 6, kind: 'muster' as const },
-      { hour: 17, kind: 'pasture' as const },
-    ]) {
-      const grounded = w.windMs > 11;
-      const partial = !grounded && w.windMs > 9;
+    for (const slot of FLIGHT_SLOTS) {
+      const grounded = w.windMs > FARM.flights.groundedAboveWindMs;
+      const partial = !grounded && w.windMs > FARM.flights.shortenedAboveWindMs;
       const status: Flight['status'] = grounded ? 'aborted' : partial ? 'partial' : 'complete';
 
       // muster flights fly the occupied paddocks; pasture flights sweep the resting ones
@@ -438,7 +447,7 @@ function simulateFlights(rng: Rng, herdDays: HerdDay[], weather: DayWeather[]): 
           // occlusion: tall grass, calves lying down, animals bunched under shade
           // a complete low-altitude pass over an open plateau finds nearly every animal;
           // what actually costs a count is a shortened mission or a herd on the move
-          let missRate = 0.0012 + (hd.meanSpreadM < 160 ? 0.0025 : 0);
+          let missRate = FARM.flights.baseMissRate + (hd.meanSpreadM < 160 ? 0.0025 : 0);
           if (w.tempC > 32) missRate += 0.002;
           if (partial) missRate += 0.03;
           const breachDay = BREACHES.some((b) => b.herdId === herd.id && b.day === day);
@@ -472,7 +481,10 @@ function simulateFlights(rng: Rng, herdDays: HerdDay[], weather: DayWeather[]): 
         tempC: w.tempC,
         detections,
         note: grounded
-          ? { en: 'Grounded — wind above 11 m/s launch limit', zh: '风速超过 11 m/s 起飞限值，任务取消' }
+          ? {
+              en: `Grounded — wind above ${FARM.flights.groundedAboveWindMs} m/s launch limit`,
+              zh: `风速超过 ${FARM.flights.groundedAboveWindMs} m/s 起飞限值，任务取消`,
+            }
           : partial
             ? { en: 'Shortened mission — gusty conditions', zh: '阵风影响，航线缩短' }
             : undefined,
@@ -734,7 +746,9 @@ export function buildHeatmap(steps: HerdStep[], cellM = 200) {
 
 export function buildDataset(): Dataset {
   const rng = makeRng(880517);
-  const weather = buildWeather(rng);
+  // the weather series is read straight from the database: edit a windy day there and the
+  // flight for that day is grounded, the count is carried over, and the alert follows
+  const weather: DayWeather[] = FARM.weather.slice(0, DAYS);
   const schedule = buildRotation();
   const { steps, herdDays } = simulateHerds(rng, schedule, weather);
   const paddockDays = simulatePasture(rng, herdDays, weather);
@@ -748,11 +762,8 @@ export function buildDataset(): Dataset {
 
   return {
     meta: {
-      ranch: { en: 'Assy Plateau summer pasture', zh: '阿瑟高原夏季牧场' },
-      region: {
-        en: 'Enbekshikazakh District, Almaty Region',
-        zh: '阿拉木图州 恩别克什哈萨克区',
-      },
+      ranch: FARM.meta.farm,
+      region: FARM.meta.region,
       startDate: dateForDay(0),
       days: DAYS,
       quotaSheepUnits: QUOTA_SHEEP_UNITS,

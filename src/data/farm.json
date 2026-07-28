@@ -1,0 +1,1190 @@
+{
+  "$readme": {
+    "what": "Input database for PastureWatch. Every number, map, chart and alert in the app is computed from this file — nothing else is stored.",
+    "how": "Edit a value, then load this file back through the Data menu in the app (Data → Load an edited file).",
+    "meta": "Where the pasture is and how big it is. gridCols × gridRows must equal the number of areas; layoutSeed redraws the fence lines.",
+    "season": "First day of grazing and how many days it runs. weather must have at least that many entries.",
+    "forage": "The grass budget. peakGrassKgPerHa sets how much each pasture type grows; allowableUse and intake set how many animals a hectare can carry.",
+    "flights": "Drone schedule and limits. The first hour is the counting mission; wind above groundedAboveWindMs cancels the day, above shortenedAboveWindMs cuts it short. baseMissRate is how often a visible animal is missed.",
+    "areas": "One entry per grazing area. pasture is meadow (best), typical, or sandy (poorest) — change it and the grass, the Green Index and the overgrazing alerts all move.",
+    "herds": "Herd size, the areas it rotates through, how many days it stays in each, and where in the cycle it starts.",
+    "animalEvents": "The individual animals the system flags. lost = gone and still gone; needsAttention = drifted off and stopped moving; separated = away from the mob but fine; welfare = flagged by how it moves.",
+    "weather": "One row per day. Rain drives grass growth, temperature drives grazing hours, wind decides whether the drone flies."
+  },
+  "meta": {
+    "farm": {
+      "en": "Assy Plateau summer pasture",
+      "zh": "阿瑟高原夏季牧场"
+    },
+    "region": {
+      "en": "Enbekshikazakh District, Almaty Region",
+      "zh": "阿拉木图州 恩别克什哈萨克区"
+    },
+    "originLat": 43.2814,
+    "originLon": 77.7396,
+    "widthM": 10800,
+    "heightM": 6480,
+    "gridCols": 4,
+    "gridRows": 3,
+    "layoutSeed": 20260615
+  },
+  "season": {
+    "startDate": "2026-06-01",
+    "days": 120
+  },
+  "forage": {
+    "allowableUse": 0.3,
+    "intakeKgPerAnimalPerDay": 11.5,
+    "peakGrassKgPerHa": {
+      "meadow": 2250,
+      "typical": 1550,
+      "sandy": 780
+    }
+  },
+  "flights": {
+    "hours": [
+      6,
+      17
+    ],
+    "groundedAboveWindMs": 11,
+    "shortenedAboveWindMs": 9,
+    "baseMissRate": 0.0012
+  },
+  "areas": [
+    {
+      "id": "P1",
+      "name": {
+        "en": "Area 1",
+        "zh": "1 号草场"
+      },
+      "pasture": "typical"
+    },
+    {
+      "id": "P2",
+      "name": {
+        "en": "Area 2",
+        "zh": "2 号草场"
+      },
+      "pasture": "meadow"
+    },
+    {
+      "id": "P3",
+      "name": {
+        "en": "Area 3",
+        "zh": "3 号草场"
+      },
+      "pasture": "typical"
+    },
+    {
+      "id": "P4",
+      "name": {
+        "en": "Area 4",
+        "zh": "4 号草场"
+      },
+      "pasture": "typical"
+    },
+    {
+      "id": "P5",
+      "name": {
+        "en": "Area 5",
+        "zh": "5 号草场"
+      },
+      "pasture": "sandy"
+    },
+    {
+      "id": "P6",
+      "name": {
+        "en": "Area 6",
+        "zh": "6 号草场"
+      },
+      "pasture": "typical"
+    },
+    {
+      "id": "P7",
+      "name": {
+        "en": "Area 7",
+        "zh": "7 号草场"
+      },
+      "pasture": "typical"
+    },
+    {
+      "id": "P8",
+      "name": {
+        "en": "Area 8",
+        "zh": "8 号草场"
+      },
+      "pasture": "meadow"
+    },
+    {
+      "id": "P9",
+      "name": {
+        "en": "Area 9",
+        "zh": "9 号草场"
+      },
+      "pasture": "meadow"
+    },
+    {
+      "id": "P10",
+      "name": {
+        "en": "Area 10",
+        "zh": "10 号草场"
+      },
+      "pasture": "meadow"
+    },
+    {
+      "id": "P11",
+      "name": {
+        "en": "Area 11",
+        "zh": "11 号草场"
+      },
+      "pasture": "meadow"
+    },
+    {
+      "id": "P12",
+      "name": {
+        "en": "Area 12",
+        "zh": "12 号草场"
+      },
+      "pasture": "typical"
+    }
+  ],
+  "herds": [
+    {
+      "id": "H1",
+      "name": {
+        "en": "Herd 1",
+        "zh": "1 号牛群"
+      },
+      "head": 405,
+      "animalUnitsPerHead": 1,
+      "rotation": [
+        "P1",
+        "P5",
+        "P9"
+      ],
+      "daysPerArea": 13,
+      "rotationOffset": 0
+    },
+    {
+      "id": "H2",
+      "name": {
+        "en": "Herd 2",
+        "zh": "2 号牛群"
+      },
+      "head": 355,
+      "animalUnitsPerHead": 1,
+      "rotation": [
+        "P2",
+        "P6",
+        "P10"
+      ],
+      "daysPerArea": 12,
+      "rotationOffset": 4
+    },
+    {
+      "id": "H3",
+      "name": {
+        "en": "Herd 3",
+        "zh": "3 号牛群"
+      },
+      "head": 300,
+      "animalUnitsPerHead": 0.7,
+      "rotation": [
+        "P3",
+        "P7",
+        "P11"
+      ],
+      "daysPerArea": 14,
+      "rotationOffset": 7
+    },
+    {
+      "id": "H4",
+      "name": {
+        "en": "Herd 4",
+        "zh": "4 号牛群"
+      },
+      "head": 260,
+      "animalUnitsPerHead": 1.15,
+      "rotation": [
+        "P4",
+        "P8",
+        "P12"
+      ],
+      "daysPerArea": 11,
+      "rotationOffset": 2
+    }
+  ],
+  "animalEvents": {
+    "lost": [
+      {
+        "cowId": "3-201",
+        "herdId": "H3",
+        "fromDay": 74
+      }
+    ],
+    "needsAttention": [
+      {
+        "cowId": "1-118",
+        "fromDay": 112,
+        "awayM": 1180,
+        "side": 240
+      },
+      {
+        "cowId": "1-243",
+        "fromDay": 109,
+        "awayM": 980,
+        "side": -320
+      }
+    ],
+    "separated": [
+      {
+        "cowId": "4-090",
+        "fromDay": 115,
+        "awayM": 760,
+        "side": 300
+      },
+      {
+        "cowId": "4-166",
+        "fromDay": 117,
+        "awayM": 690,
+        "side": -240
+      }
+    ],
+    "welfare": [
+      {
+        "cowId": "1-077",
+        "fromDay": 114
+      },
+      {
+        "cowId": "3-140",
+        "fromDay": 117
+      }
+    ]
+  },
+  "waterPoints": [
+    {
+      "id": "W1",
+      "name": {
+        "en": "Assy River ford",
+        "zh": "阿瑟河渡口"
+      },
+      "kind": "river",
+      "x": 2450,
+      "y": 4560
+    },
+    {
+      "id": "W2",
+      "name": {
+        "en": "North spring",
+        "zh": "北泉"
+      },
+      "kind": "pond",
+      "x": 3980,
+      "y": 1320
+    },
+    {
+      "id": "W3",
+      "name": {
+        "en": "Kuray spring",
+        "zh": "库赖泉"
+      },
+      "kind": "pond",
+      "x": 6900,
+      "y": 2680
+    },
+    {
+      "id": "W4",
+      "name": {
+        "en": "Assy River bend",
+        "zh": "阿瑟河湾"
+      },
+      "kind": "river",
+      "x": 5600,
+      "y": 5180
+    },
+    {
+      "id": "W5",
+      "name": {
+        "en": "Bartogai inlet",
+        "zh": "巴尔托盖水库入口"
+      },
+      "kind": "river",
+      "x": 9750,
+      "y": 5450
+    }
+  ],
+  "places": [
+    {
+      "id": "L1",
+      "name": {
+        "en": "Summer camp",
+        "zh": "夏季牧点"
+      },
+      "kind": "camp",
+      "x": 4980,
+      "y": 4230
+    },
+    {
+      "id": "L2",
+      "name": {
+        "en": "Drone pad",
+        "zh": "无人机起降点"
+      },
+      "kind": "dronePad",
+      "x": 5240,
+      "y": 4090
+    },
+    {
+      "id": "L3",
+      "name": {
+        "en": "Assy-Turgen Observatory",
+        "zh": "阿瑟-图尔根天文台"
+      },
+      "kind": "handling",
+      "x": 1850,
+      "y": 980
+    }
+  ],
+  "weather": [
+    {
+      "day": 0,
+      "date": "2026-06-01",
+      "rainMm": 0,
+      "tempC": 19.9,
+      "windMs": 2.3
+    },
+    {
+      "day": 1,
+      "date": "2026-06-02",
+      "rainMm": 2.1,
+      "tempC": 21.2,
+      "windMs": 7.2
+    },
+    {
+      "day": 2,
+      "date": "2026-06-03",
+      "rainMm": 0,
+      "tempC": 17.6,
+      "windMs": 4.7
+    },
+    {
+      "day": 3,
+      "date": "2026-06-04",
+      "rainMm": 0,
+      "tempC": 17.6,
+      "windMs": 2.8
+    },
+    {
+      "day": 4,
+      "date": "2026-06-05",
+      "rainMm": 1.5,
+      "tempC": 17.4,
+      "windMs": 3.8
+    },
+    {
+      "day": 5,
+      "date": "2026-06-06",
+      "rainMm": 0,
+      "tempC": 19.5,
+      "windMs": 3.7
+    },
+    {
+      "day": 6,
+      "date": "2026-06-07",
+      "rainMm": 0,
+      "tempC": 19.5,
+      "windMs": 7.4
+    },
+    {
+      "day": 7,
+      "date": "2026-06-08",
+      "rainMm": 1,
+      "tempC": 19.5,
+      "windMs": 10.7
+    },
+    {
+      "day": 8,
+      "date": "2026-06-09",
+      "rainMm": 0,
+      "tempC": 20.8,
+      "windMs": 3.7
+    },
+    {
+      "day": 9,
+      "date": "2026-06-10",
+      "rainMm": 0,
+      "tempC": 20.2,
+      "windMs": 2.8
+    },
+    {
+      "day": 10,
+      "date": "2026-06-11",
+      "rainMm": 0,
+      "tempC": 21.3,
+      "windMs": 2.4
+    },
+    {
+      "day": 11,
+      "date": "2026-06-12",
+      "rainMm": 2.9,
+      "tempC": 21.3,
+      "windMs": 2.4
+    },
+    {
+      "day": 12,
+      "date": "2026-06-13",
+      "rainMm": 0,
+      "tempC": 20,
+      "windMs": 12.6
+    },
+    {
+      "day": 13,
+      "date": "2026-06-14",
+      "rainMm": 0,
+      "tempC": 21.6,
+      "windMs": 3.1
+    },
+    {
+      "day": 14,
+      "date": "2026-06-15",
+      "rainMm": 0,
+      "tempC": 21.5,
+      "windMs": 7.2
+    },
+    {
+      "day": 15,
+      "date": "2026-06-16",
+      "rainMm": 0,
+      "tempC": 20.2,
+      "windMs": 4.9
+    },
+    {
+      "day": 16,
+      "date": "2026-06-17",
+      "rainMm": 0,
+      "tempC": 22.1,
+      "windMs": 3
+    },
+    {
+      "day": 17,
+      "date": "2026-06-18",
+      "rainMm": 0,
+      "tempC": 19.2,
+      "windMs": 6.1
+    },
+    {
+      "day": 18,
+      "date": "2026-06-19",
+      "rainMm": 0,
+      "tempC": 23.3,
+      "windMs": 6.8
+    },
+    {
+      "day": 19,
+      "date": "2026-06-20",
+      "rainMm": 0,
+      "tempC": 21.9,
+      "windMs": 5.9
+    },
+    {
+      "day": 20,
+      "date": "2026-06-21",
+      "rainMm": 0,
+      "tempC": 22.4,
+      "windMs": 5.7
+    },
+    {
+      "day": 21,
+      "date": "2026-06-22",
+      "rainMm": 0,
+      "tempC": 22.9,
+      "windMs": 2.9
+    },
+    {
+      "day": 22,
+      "date": "2026-06-23",
+      "rainMm": 0,
+      "tempC": 22.4,
+      "windMs": 6.2
+    },
+    {
+      "day": 23,
+      "date": "2026-06-24",
+      "rainMm": 0,
+      "tempC": 23.2,
+      "windMs": 6.1
+    },
+    {
+      "day": 24,
+      "date": "2026-06-25",
+      "rainMm": 0,
+      "tempC": 21.2,
+      "windMs": 6.2
+    },
+    {
+      "day": 25,
+      "date": "2026-06-26",
+      "rainMm": 0,
+      "tempC": 22.8,
+      "windMs": 1.6
+    },
+    {
+      "day": 26,
+      "date": "2026-06-27",
+      "rainMm": 0,
+      "tempC": 21.6,
+      "windMs": 6.5
+    },
+    {
+      "day": 27,
+      "date": "2026-06-28",
+      "rainMm": 0,
+      "tempC": 21.3,
+      "windMs": 2
+    },
+    {
+      "day": 28,
+      "date": "2026-06-29",
+      "rainMm": 0,
+      "tempC": 22.2,
+      "windMs": 7.3
+    },
+    {
+      "day": 29,
+      "date": "2026-06-30",
+      "rainMm": 0,
+      "tempC": 22.8,
+      "windMs": 9.4
+    },
+    {
+      "day": 30,
+      "date": "2026-07-01",
+      "rainMm": 0,
+      "tempC": 21.2,
+      "windMs": 1.6
+    },
+    {
+      "day": 31,
+      "date": "2026-07-02",
+      "rainMm": 0,
+      "tempC": 24,
+      "windMs": 4.8
+    },
+    {
+      "day": 32,
+      "date": "2026-07-03",
+      "rainMm": 0,
+      "tempC": 25.1,
+      "windMs": 1.8
+    },
+    {
+      "day": 33,
+      "date": "2026-07-04",
+      "rainMm": 0,
+      "tempC": 22.9,
+      "windMs": 5.7
+    },
+    {
+      "day": 34,
+      "date": "2026-07-05",
+      "rainMm": 0,
+      "tempC": 25.5,
+      "windMs": 5.7
+    },
+    {
+      "day": 35,
+      "date": "2026-07-06",
+      "rainMm": 0,
+      "tempC": 25,
+      "windMs": 1.8
+    },
+    {
+      "day": 36,
+      "date": "2026-07-07",
+      "rainMm": 0,
+      "tempC": 23.6,
+      "windMs": 5.6
+    },
+    {
+      "day": 37,
+      "date": "2026-07-08",
+      "rainMm": 21.1,
+      "tempC": 21.2,
+      "windMs": 4.3
+    },
+    {
+      "day": 38,
+      "date": "2026-07-09",
+      "rainMm": 0,
+      "tempC": 23.6,
+      "windMs": 1.7
+    },
+    {
+      "day": 39,
+      "date": "2026-07-10",
+      "rainMm": 2.8,
+      "tempC": 23.8,
+      "windMs": 7
+    },
+    {
+      "day": 40,
+      "date": "2026-07-11",
+      "rainMm": 0,
+      "tempC": 23.5,
+      "windMs": 3.8
+    },
+    {
+      "day": 41,
+      "date": "2026-07-12",
+      "rainMm": 15.9,
+      "tempC": 20.9,
+      "windMs": 12.7
+    },
+    {
+      "day": 42,
+      "date": "2026-07-13",
+      "rainMm": 0,
+      "tempC": 23.8,
+      "windMs": 4.2
+    },
+    {
+      "day": 43,
+      "date": "2026-07-14",
+      "rainMm": 0,
+      "tempC": 23.3,
+      "windMs": 6.9
+    },
+    {
+      "day": 44,
+      "date": "2026-07-15",
+      "rainMm": 23.4,
+      "tempC": 20.9,
+      "windMs": 7
+    },
+    {
+      "day": 45,
+      "date": "2026-07-16",
+      "rainMm": 0,
+      "tempC": 23.1,
+      "windMs": 4.8
+    },
+    {
+      "day": 46,
+      "date": "2026-07-17",
+      "rainMm": 0,
+      "tempC": 23.6,
+      "windMs": 3.7
+    },
+    {
+      "day": 47,
+      "date": "2026-07-18",
+      "rainMm": 3.8,
+      "tempC": 24.2,
+      "windMs": 3.6
+    },
+    {
+      "day": 48,
+      "date": "2026-07-19",
+      "rainMm": 0,
+      "tempC": 24.2,
+      "windMs": 4.5
+    },
+    {
+      "day": 49,
+      "date": "2026-07-20",
+      "rainMm": 0,
+      "tempC": 24.1,
+      "windMs": 4.3
+    },
+    {
+      "day": 50,
+      "date": "2026-07-21",
+      "rainMm": 0,
+      "tempC": 30.8,
+      "windMs": 7
+    },
+    {
+      "day": 51,
+      "date": "2026-07-22",
+      "rainMm": 0.8,
+      "tempC": 31.1,
+      "windMs": 2.1
+    },
+    {
+      "day": 52,
+      "date": "2026-07-23",
+      "rainMm": 0,
+      "tempC": 31.4,
+      "windMs": 2.7
+    },
+    {
+      "day": 53,
+      "date": "2026-07-24",
+      "rainMm": 5.9,
+      "tempC": 31.7,
+      "windMs": 6.9
+    },
+    {
+      "day": 54,
+      "date": "2026-07-25",
+      "rainMm": 0,
+      "tempC": 32.2,
+      "windMs": 2.8
+    },
+    {
+      "day": 55,
+      "date": "2026-07-26",
+      "rainMm": 0,
+      "tempC": 31.7,
+      "windMs": 10.2
+    },
+    {
+      "day": 56,
+      "date": "2026-07-27",
+      "rainMm": 0,
+      "tempC": 30.1,
+      "windMs": 2.8
+    },
+    {
+      "day": 57,
+      "date": "2026-07-28",
+      "rainMm": 1.3,
+      "tempC": 31.3,
+      "windMs": 3.8
+    },
+    {
+      "day": 58,
+      "date": "2026-07-29",
+      "rainMm": 0,
+      "tempC": 25.2,
+      "windMs": 2
+    },
+    {
+      "day": 59,
+      "date": "2026-07-30",
+      "rainMm": 0,
+      "tempC": 23.7,
+      "windMs": 7.1
+    },
+    {
+      "day": 60,
+      "date": "2026-07-31",
+      "rainMm": 0,
+      "tempC": 24.4,
+      "windMs": 5.3
+    },
+    {
+      "day": 61,
+      "date": "2026-08-01",
+      "rainMm": 0,
+      "tempC": 22.7,
+      "windMs": 7.1
+    },
+    {
+      "day": 62,
+      "date": "2026-08-02",
+      "rainMm": 0,
+      "tempC": 23,
+      "windMs": 4.5
+    },
+    {
+      "day": 63,
+      "date": "2026-08-03",
+      "rainMm": 0,
+      "tempC": 22.9,
+      "windMs": 13.1
+    },
+    {
+      "day": 64,
+      "date": "2026-08-04",
+      "rainMm": 0,
+      "tempC": 23.3,
+      "windMs": 4.2
+    },
+    {
+      "day": 65,
+      "date": "2026-08-05",
+      "rainMm": 5.6,
+      "tempC": 23.4,
+      "windMs": 7.1
+    },
+    {
+      "day": 66,
+      "date": "2026-08-06",
+      "rainMm": 0,
+      "tempC": 22.8,
+      "windMs": 4.1
+    },
+    {
+      "day": 67,
+      "date": "2026-08-07",
+      "rainMm": 4.8,
+      "tempC": 22,
+      "windMs": 4.7
+    },
+    {
+      "day": 68,
+      "date": "2026-08-08",
+      "rainMm": 2.7,
+      "tempC": 24,
+      "windMs": 5.4
+    },
+    {
+      "day": 69,
+      "date": "2026-08-09",
+      "rainMm": 1.4,
+      "tempC": 21.7,
+      "windMs": 5.9
+    },
+    {
+      "day": 70,
+      "date": "2026-08-10",
+      "rainMm": 0,
+      "tempC": 22.8,
+      "windMs": 5.1
+    },
+    {
+      "day": 71,
+      "date": "2026-08-11",
+      "rainMm": 0,
+      "tempC": 23.5,
+      "windMs": 6.9
+    },
+    {
+      "day": 72,
+      "date": "2026-08-12",
+      "rainMm": 0,
+      "tempC": 22,
+      "windMs": 7
+    },
+    {
+      "day": 73,
+      "date": "2026-08-13",
+      "rainMm": 0,
+      "tempC": 22.8,
+      "windMs": 2
+    },
+    {
+      "day": 74,
+      "date": "2026-08-14",
+      "rainMm": 0,
+      "tempC": 22.4,
+      "windMs": 9.6
+    },
+    {
+      "day": 75,
+      "date": "2026-08-15",
+      "rainMm": 0,
+      "tempC": 23.5,
+      "windMs": 2.6
+    },
+    {
+      "day": 76,
+      "date": "2026-08-16",
+      "rainMm": 5.1,
+      "tempC": 20.1,
+      "windMs": 7.1
+    },
+    {
+      "day": 77,
+      "date": "2026-08-17",
+      "rainMm": 0,
+      "tempC": 21.2,
+      "windMs": 2.5
+    },
+    {
+      "day": 78,
+      "date": "2026-08-18",
+      "rainMm": 0,
+      "tempC": 24,
+      "windMs": 5.1
+    },
+    {
+      "day": 79,
+      "date": "2026-08-19",
+      "rainMm": 0,
+      "tempC": 19.2,
+      "windMs": 5
+    },
+    {
+      "day": 80,
+      "date": "2026-08-20",
+      "rainMm": 0,
+      "tempC": 22.4,
+      "windMs": 3
+    },
+    {
+      "day": 81,
+      "date": "2026-08-21",
+      "rainMm": 0,
+      "tempC": 20.7,
+      "windMs": 5.1
+    },
+    {
+      "day": 82,
+      "date": "2026-08-22",
+      "rainMm": 0,
+      "tempC": 22.7,
+      "windMs": 3.6
+    },
+    {
+      "day": 83,
+      "date": "2026-08-23",
+      "rainMm": 0,
+      "tempC": 21.7,
+      "windMs": 1.8
+    },
+    {
+      "day": 84,
+      "date": "2026-08-24",
+      "rainMm": 0,
+      "tempC": 18.7,
+      "windMs": 1.8
+    },
+    {
+      "day": 85,
+      "date": "2026-08-25",
+      "rainMm": 0,
+      "tempC": 20.5,
+      "windMs": 4.7
+    },
+    {
+      "day": 86,
+      "date": "2026-08-26",
+      "rainMm": 5.5,
+      "tempC": 21.6,
+      "windMs": 7.2
+    },
+    {
+      "day": 87,
+      "date": "2026-08-27",
+      "rainMm": 0,
+      "tempC": 19.8,
+      "windMs": 2.1
+    },
+    {
+      "day": 88,
+      "date": "2026-08-28",
+      "rainMm": 0,
+      "tempC": 21.6,
+      "windMs": 13.5
+    },
+    {
+      "day": 89,
+      "date": "2026-08-29",
+      "rainMm": 0,
+      "tempC": 20.5,
+      "windMs": 2.5
+    },
+    {
+      "day": 90,
+      "date": "2026-08-30",
+      "rainMm": 1.2,
+      "tempC": 19.2,
+      "windMs": 3.7
+    },
+    {
+      "day": 91,
+      "date": "2026-08-31",
+      "rainMm": 0,
+      "tempC": 17.4,
+      "windMs": 1.8
+    },
+    {
+      "day": 92,
+      "date": "2026-09-01",
+      "rainMm": 0.5,
+      "tempC": 18.3,
+      "windMs": 7.2
+    },
+    {
+      "day": 93,
+      "date": "2026-09-02",
+      "rainMm": 0,
+      "tempC": 18.9,
+      "windMs": 2.2
+    },
+    {
+      "day": 94,
+      "date": "2026-09-03",
+      "rainMm": 1.5,
+      "tempC": 20.3,
+      "windMs": 5.5
+    },
+    {
+      "day": 95,
+      "date": "2026-09-04",
+      "rainMm": 0,
+      "tempC": 18.2,
+      "windMs": 6.6
+    },
+    {
+      "day": 96,
+      "date": "2026-09-05",
+      "rainMm": 0,
+      "tempC": 16.9,
+      "windMs": 9.5
+    },
+    {
+      "day": 97,
+      "date": "2026-09-06",
+      "rainMm": 0,
+      "tempC": 18.9,
+      "windMs": 4.4
+    },
+    {
+      "day": 98,
+      "date": "2026-09-07",
+      "rainMm": 0,
+      "tempC": 18.2,
+      "windMs": 4.3
+    },
+    {
+      "day": 99,
+      "date": "2026-09-08",
+      "rainMm": 0,
+      "tempC": 16.6,
+      "windMs": 5.3
+    },
+    {
+      "day": 100,
+      "date": "2026-09-09",
+      "rainMm": 0,
+      "tempC": 16.7,
+      "windMs": 7.7
+    },
+    {
+      "day": 101,
+      "date": "2026-09-10",
+      "rainMm": 0,
+      "tempC": 15.9,
+      "windMs": 6.5
+    },
+    {
+      "day": 102,
+      "date": "2026-09-11",
+      "rainMm": 3.3,
+      "tempC": 15.9,
+      "windMs": 7.1
+    },
+    {
+      "day": 103,
+      "date": "2026-09-12",
+      "rainMm": 0,
+      "tempC": 14.8,
+      "windMs": 3.8
+    },
+    {
+      "day": 104,
+      "date": "2026-09-13",
+      "rainMm": 0,
+      "tempC": 18.8,
+      "windMs": 3.2
+    },
+    {
+      "day": 105,
+      "date": "2026-09-14",
+      "rainMm": 4.6,
+      "tempC": 14.8,
+      "windMs": 3.8
+    },
+    {
+      "day": 106,
+      "date": "2026-09-15",
+      "rainMm": 5.3,
+      "tempC": 17.9,
+      "windMs": 3.7
+    },
+    {
+      "day": 107,
+      "date": "2026-09-16",
+      "rainMm": 0,
+      "tempC": 15.9,
+      "windMs": 6.6
+    },
+    {
+      "day": 108,
+      "date": "2026-09-17",
+      "rainMm": 0,
+      "tempC": 16.7,
+      "windMs": 4.2
+    },
+    {
+      "day": 109,
+      "date": "2026-09-18",
+      "rainMm": 0,
+      "tempC": 14.5,
+      "windMs": 14
+    },
+    {
+      "day": 110,
+      "date": "2026-09-19",
+      "rainMm": 0,
+      "tempC": 15.4,
+      "windMs": 4.9
+    },
+    {
+      "day": 111,
+      "date": "2026-09-20",
+      "rainMm": 0,
+      "tempC": 15.8,
+      "windMs": 8.3
+    },
+    {
+      "day": 112,
+      "date": "2026-09-21",
+      "rainMm": 0,
+      "tempC": 13.7,
+      "windMs": 6.4
+    },
+    {
+      "day": 113,
+      "date": "2026-09-22",
+      "rainMm": 0,
+      "tempC": 16.5,
+      "windMs": 9.4
+    },
+    {
+      "day": 114,
+      "date": "2026-09-23",
+      "rainMm": 0,
+      "tempC": 11.3,
+      "windMs": 7.4
+    },
+    {
+      "day": 115,
+      "date": "2026-09-24",
+      "rainMm": 0,
+      "tempC": 13.3,
+      "windMs": 3.4
+    },
+    {
+      "day": 116,
+      "date": "2026-09-25",
+      "rainMm": 0,
+      "tempC": 12,
+      "windMs": 5.4
+    },
+    {
+      "day": 117,
+      "date": "2026-09-26",
+      "rainMm": 0,
+      "tempC": 14.7,
+      "windMs": 5.1
+    },
+    {
+      "day": 118,
+      "date": "2026-09-27",
+      "rainMm": 0,
+      "tempC": 12.8,
+      "windMs": 3.1
+    },
+    {
+      "day": 119,
+      "date": "2026-09-28",
+      "rainMm": 0,
+      "tempC": 13,
+      "windMs": 3.8
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 import { makeRng } from '../lib/rng';
 import { dist, pointInPolygon } from '../lib/geo';
 import { elevationAt, herds, LOST_ANIMALS, paddockById, RANCH_H, RANCH_W } from './ranch';
+import { FARM } from './source';
 import type { Dataset, Pt } from './types';
 
 /** One ear-tagged animal. IDs read "1-042": herd number, then the animal's number in it. */
@@ -56,17 +57,12 @@ const hash = (herdId: string, day: number) => herdId.charCodeAt(1) * 7919 + day 
  */
 const LOST = LOST_ANIMALS;
 
-/** Two animals that have drifted off the mob but are still walking and grazing normally. */
-const SEPARATED: { cowId: string; fromDay: number; awayM: number; side: number }[] = [
-  { cowId: '4-090', fromDay: 115, awayM: 760, side: 300 },
-  { cowId: '4-166', fromDay: 117, awayM: 690, side: -240 },
-];
+/** Animals that have drifted off the mob but are still walking and grazing normally. */
+export const SEPARATED: { cowId: string; fromDay: number; awayM: number; side: number }[] =
+  FARM.animalEvents.separated;
 
 /** Animals the imagery flagged for how they move. */
-const WELFARE: { cowId: string; fromDay: number }[] = [
-  { cowId: '1-077', fromDay: 114 },
-  { cowId: '3-140', fromDay: 117 },
-];
+export const WELFARE: { cowId: string; fromDay: number }[] = FARM.animalEvents.welfare;
 
 /**
  * Which animals the drone failed to pick out, derived from the herd count the mission
@@ -283,7 +279,5 @@ export function attentionByDay(data: Dataset): DayAttention[] {
   return attentionCache;
 }
 
-export const ATTENTION: { cowId: string; fromDay: number; awayM: number; side: number }[] = [
-  { cowId: '1-118', fromDay: 112, awayM: 1180, side: 240 },
-  { cowId: '1-243', fromDay: 109, awayM: 980, side: -320 },
-];
+export const ATTENTION: { cowId: string; fromDay: number; awayM: number; side: number }[] =
+  FARM.animalEvents.needsAttention;

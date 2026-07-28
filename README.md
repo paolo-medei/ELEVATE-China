@@ -25,8 +25,35 @@ map. Nothing is fetched from the network.
 npm install
 npm run dev         # http://localhost:5173
 npm run build       # type-check + production bundle into dist/
-npm run standalone  # rebuild PastureWatch.html, the downloadable single file
+npm run standalone  # rebuild PastureWatch.html + farm.json, the downloadable pair
+npm run make-farm   # regenerate src/data/farm.json from the model defaults
 ```
+
+## The input database — `farm.json`
+
+The app has **one input file**: [`farm.json`](farm.json) (the working copy lives at
+`src/data/farm.json`). Nothing else is stored — every count, position, chart, alert and colour on
+screen is calculated from it. Change a value and the whole interface changes with it.
+
+**How to edit it:** open the app → **Data** in the top bar → **Download farm.json** → edit it in any
+text editor → **Load an edited file**. The page reloads and recomputes the season. **Back to the
+original file** undoes everything. A badge in the header shows when an edited database is in force.
+An unusable file is refused with the reason and the current one is kept.
+
+| Section | What it sets | Try changing |
+|---|---|---|
+| `meta` | where the pasture is, how big, how the areas are laid out | `layoutSeed` redraws every fence line |
+| `season` | first day of grazing and how many days it runs | `days: 60` for a short season |
+| `forage` | how much grass each pasture type grows, intake per animal, safe offtake | `peakGrassKgPerHa.meadow` |
+| `flights` | drone hours, the wind limits that ground or shorten a mission, miss rate | `groundedAboveWindMs: 6` grounds most of the season |
+| `areas` | one entry per area, each `meadow` / `typical` / `sandy` | make an area `sandy` and watch its Green Index fall and an overgrazing alert appear |
+| `herds` | herd size, the areas it rotates through, days per area, where the cycle starts | `head`, `rotation`, `daysPerArea` |
+| `animalEvents` | the individual animals flagged: `lost`, `needsAttention`, `separated`, `welfare` | add a cow id and a `fromDay` |
+| `weather` | one row per day — rain, temperature, wind | set a `windMs` above 11 and that day's flight is grounded, the count carries over, and the alert follows |
+
+Worked example: setting every area to `sandy` takes the Green Index from 0.32 to 0.26 and the job
+list from 6 items to 13; cutting `herds[0].head` from 405 to 120 takes the registered total from
+1,320 to 1,035 across every screen.
 
 ## The three screens
 
@@ -63,6 +90,8 @@ in ten-day blocks, month-by-month and season-by-season summaries, and the recent
 
 ## How the data holds together
 
+`src/data/source.ts` reads `farm.json` — the one file everything starts from, either the shipped copy
+or one loaded through the Data menu. `src/data/ranch.ts` turns it into geography and herds;
 `src/data/simulate.ts` runs the season — herd movement by the hour, forage growth against rainfall
 and the seasonal curve, drone missions with wind limits and occlusion. `src/data/animals.ts` turns
 that into individual animals: **which animals the drone missed is derived from the herd count the
@@ -81,13 +110,17 @@ Three things the demo is careful about, because each would cost a farmer a waste
 ## Project layout
 
 ```
+farm.json      the input database, next to PastureWatch.html
 src/
-  data/        plateau geography & herds (ranch.ts), season simulation (simulate.ts),
-               individual animals (animals.ts)
+  data/        farm.json (input database), source.ts (loads it), ranch.ts (geography &
+               herds), simulate.ts (the season), animals.ts (individual animals)
   lib/         seeded PRNG, geometry, area status rules, the issue builder, formatting
-  components/  HerdMap (terrain + animals), chart kit, UI atoms
+  components/  HerdMap (terrain + animals), DataPanel (the database drawer), chart kit, UI atoms
   views/       TodayView · AlertsView · HistoryView
   i18n.tsx     EN/中文 dictionary, language + theme context
+scripts/
+  make-farm.ts     regenerates src/data/farm.json
+  standalone.mjs   inlines the build into PastureWatch.html
 ```
 
 > Demonstration dataset. The herds, flights and weather are simulated; the geography, the model

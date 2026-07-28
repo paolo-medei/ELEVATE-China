@@ -63,3 +63,9 @@ ${script}
 
 fs.writeFileSync(out, html);
 console.log(`${path.relative(process.cwd(), out)} — ${(html.length / 1024).toFixed(0)} KB, opens offline in any browser`);
+
+// the app and the database it reads travel together: farm.json sits beside the .html so a
+// grazier can open one, edit the other, and load it straight back in
+const db = fs.readFileSync(path.resolve('src/data/farm.json'), 'utf8');
+fs.writeFileSync(path.resolve('farm.json'), db);
+console.log(`farm.json — ${(db.length / 1024).toFixed(0)} KB, the input database the app reads`);

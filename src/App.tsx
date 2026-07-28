@@ -4,6 +4,8 @@ import { buildDataset } from './data/simulate';
 import { TodayView } from './views/TodayView';
 import { AlertsView } from './views/AlertsView';
 import { HistoryView } from './views/HistoryView';
+import { DataPanel } from './components/DataPanel';
+import { usingCustomFarm } from './data/source';
 
 type Section = 'today' | 'alerts' | 'history';
 
@@ -12,6 +14,7 @@ export default function App() {
   const data = useMemo(() => buildDataset(), []);
   const [day, setDay] = useState(data.meta.days - 1);
   const [section, setSection] = useState<Section>('today');
+  const [dataOpen, setDataOpen] = useState(false);
 
   const sections: { key: Section; label: string }[] = [
     { key: 'today', label: t('navToday') },
@@ -58,6 +61,16 @@ export default function App() {
         </nav>
 
         <div className="topbar-right">
+          {usingCustomFarm && <span className="data-badge">{t('dataBadge')}</span>}
+          <button
+            type="button"
+            className="ghost-btn"
+            aria-pressed={dataOpen}
+            onClick={() => setDataOpen((v) => !v)}
+            title={t('dataTitle')}
+          >
+            {t('dataMenu')}
+          </button>
           <button
             type="button"
             className="ghost-btn"
@@ -77,6 +90,8 @@ export default function App() {
           </button>
         </div>
       </header>
+
+      {dataOpen && <DataPanel onClose={() => setDataOpen(false)} />}
 
       <main className="main">
         {section === 'today' && <TodayView data={data} day={day} onDay={setDay} />}
