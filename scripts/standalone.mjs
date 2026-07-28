@@ -69,4 +69,19 @@ console.log(`${path.relative(process.cwd(), out)} — ${(html.length / 1024).toF
 const db = fs.readFileSync(path.resolve('src/data/farm.json'), 'utf8');
 fs.writeFileSync(path.resolve('farm.json'), db);
 console.log(`farm.json — ${(db.length / 1024).toFixed(0)} KB, the input database the app reads`);
+
+/*
+ * docs/ is what GitHub Pages serves. The same single file, named index.html so the site
+ * root opens straight into the app, with the data files beside it to download. .nojekyll
+ * stops Pages running the files through Jekyll.
+ */
+const docs = path.resolve('docs');
+fs.mkdirSync(docs, { recursive: true });
+fs.writeFileSync(path.join(docs, 'index.html'), html);
+fs.writeFileSync(path.join(docs, '.nojekyll'), '');
+fs.writeFileSync(path.join(docs, 'farm.json'), db);
+for (const extra of ['farm-data.xlsx']) {
+  if (fs.existsSync(path.resolve(extra))) fs.copyFileSync(path.resolve(extra), path.join(docs, extra));
+}
+console.log('docs/ — the same app, ready for GitHub Pages');
 console.log('run `npm run make-xlsx` to refresh farm-data.xlsx, the Excel view of it');

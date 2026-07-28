@@ -15,6 +15,9 @@ tiles. Reload gives the same season every time.
 
 ## Run it
 
+**On the web:** the app is published with GitHub Pages from the [`docs/`](docs) folder —
+**https://paolo-medei.github.io/ELEVATE-China/**
+
 **No install:** open `FarmersWingman.html` — a single self-contained file in this repo. Double-click it
 and it runs in any browser, offline. Everything is inlined: the interface, the simulated season, the
 map. Nothing is fetched from the network.
@@ -89,6 +92,23 @@ IndexedDB rather than localStorage so there is no storage ceiling.
 `src/data/farm.json`) and the records are generated from them; a loaded workbook puts its settings
 in localStorage and its records in IndexedDB. *Data → For developers* downloads and loads the
 settings JSON directly.
+
+## Publishing it
+
+`npm run standalone` writes [`docs/`](docs) — `index.html` (the whole app in one file), `farm.json`,
+`farm-data.xlsx`, and a `.nojekyll` marker. That folder is what GitHub Pages serves, so publishing is
+three settings and no build step:
+
+1. **Settings → General → Danger Zone → Change repository visibility → Public.**
+   Pages on a private repository needs a paid plan; public is free.
+2. **Settings → Pages → Source: *Deploy from a branch*** → branch **`main`**, folder **`/docs`** → Save.
+3. Wait a minute, then open **https://paolo-medei.github.io/ELEVATE-China/**.
+
+The site is the app itself: the whole interface, the season, and the map, with nothing fetched from
+the network. `farm.json` and `farm-data.xlsx` sit next to it, so
+`…github.io/ELEVATE-China/farm-data.xlsx` downloads the spreadsheet directly.
+
+To update the published site, run `npm run standalone` and commit `docs/` — Pages redeploys on push.
 
 ## The three screens
 
