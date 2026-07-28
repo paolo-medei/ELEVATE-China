@@ -13,10 +13,19 @@ carrying 1,320 cattle in four herds (**Herd 1–4**).
 Everything runs against a **deterministic simulated season** — no backend, no API keys, no map
 tiles. Reload gives the same season every time.
 
+## Run it
+
+**No install:** open `PastureWatch.html` — a single self-contained file in this repo. Double-click it
+and it runs in any browser, offline. Everything is inlined: the interface, the simulated season, the
+map. Nothing is fetched from the network.
+
+**From source:**
+
 ```bash
 npm install
-npm run dev      # http://localhost:5173
-npm run build    # type-check + production bundle into dist/
+npm run dev         # http://localhost:5173
+npm run build       # type-check + production bundle into dist/
+npm run standalone  # rebuild PastureWatch.html, the downloadable single file
 ```
 
 ## The three screens
