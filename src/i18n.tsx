@@ -15,6 +15,24 @@ const DICT = {
     zh: '演示数据 · 模拟牧季',
   },
 
+  // the one screen
+  bigAllSafe: { en: 'All cattle are safe', zh: '牛群全部安全' },
+  bigMissing: { en: '{n} cattle missing from {herd}', zh: '{herd} 缺 {n} 头牛' },
+  bigSeen: { en: 'The drone saw {seen} of {all} cattle', zh: '无人机看到 {seen} 头，共 {all} 头' },
+  bigFlightShort: {
+    en: 'The drone could not finish its round today',
+    zh: '今日无人机未完成巡查',
+  },
+  bigCheckAgain: { en: 'Check again', zh: '需复查' },
+  bigWhere: { en: 'Where the cattle are', zh: '牛群在哪里' },
+  water: { en: 'Water', zh: '水点' },
+  bigToDo: { en: 'What to do today', zh: '今天要做什么' },
+  bigNothing: { en: 'Nothing to do today', zh: '今天无需处理' },
+  bigHerds: { en: 'The herds', zh: '各牛群' },
+  bigCows: { en: '{n} cattle', zh: '{n} 头牛' },
+  bigAllHere: { en: 'All here', zh: '全部在场' },
+  bigShort: { en: '{n} missing', zh: '缺 {n} 头' },
+
   // simple view
   modeSimple: { en: 'Today', zh: '今日' },
   modeDetailed: { en: 'Full dashboard', zh: '完整看板' },

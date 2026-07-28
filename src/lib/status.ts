@@ -79,10 +79,16 @@ export function actionsForDay(data: Dataset, day: number): Action[] {
         };
         break;
       case 'countMismatch':
-        text = {
-          en: `Go and find the missing cattle in ${herd?.en ?? 'the herd'}`,
-          zh: `寻找${herd?.zh ?? '牛群'}中未清点的牛只`,
-        };
+        text =
+          a.severity === 'warning'
+            ? {
+                en: `Count ${herd?.en ?? 'the herd'} again — the drone's round was cut short`,
+                zh: `重新清点${herd?.zh ?? '牛群'}——无人机巡查被迫缩短`,
+              }
+            : {
+                en: `Go and find the missing cattle in ${herd?.en ?? 'the herd'}`,
+                zh: `寻找${herd?.zh ?? '牛群'}中未清点的牛只`,
+              };
         break;
       case 'animalWelfare':
         text = {

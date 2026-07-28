@@ -498,20 +498,32 @@ function buildAlerts(
         // a couple of hidden animals per hundred is normal occlusion, not a missing beast
         const gapShare = gap / Math.max(1, d.expected);
         if (gapShare >= 0.03) {
+          // a shortened mission misses animals by itself: that is a recount, not a search
+          const shortMission = f.status !== 'complete';
           push({
             day,
             hour: f.hour,
             kind: 'countMismatch',
-            severity: gapShare >= 0.06 ? 'critical' : 'serious',
+            severity: shortMission ? 'warning' : gapShare >= 0.06 ? 'critical' : 'serious',
             herdId: d.herdId,
-            title: {
-              en: `${gap} head unaccounted · ${herdName(d.herdId).en}`,
-              zh: `${herdName(d.herdId).zh} 缺 ${gap} 头`,
-            },
-            detail: {
-              en: `Flight ${f.id} detected ${d.detected} of ${d.expected} registered animals at ${d.confidencePct}% mean confidence.`,
-              zh: `${f.id} 架次识别 ${d.detected} 头，登记 ${d.expected} 头，平均置信度 ${d.confidencePct}%。`,
-            },
+            title: shortMission
+              ? {
+                  en: `Recount needed · ${herdName(d.herdId).en}`,
+                  zh: `${herdName(d.herdId).zh} 需重新清点`,
+                }
+              : {
+                  en: `${gap} head unaccounted · ${herdName(d.herdId).en}`,
+                  zh: `${herdName(d.herdId).zh} 缺 ${gap} 头`,
+                },
+            detail: shortMission
+              ? {
+                  en: `Flight ${f.id} was cut short by wind and only saw ${d.detected} of ${d.expected}. Fly the count again before treating any animal as missing.`,
+                  zh: `${f.id} 架次因大风缩短，仅识别 ${d.detected} 头（登记 ${d.expected} 头）。请重新航拍清点后再判定是否走失。`,
+                }
+              : {
+                  en: `Flight ${f.id} detected ${d.detected} of ${d.expected} registered animals at ${d.confidencePct}% mean confidence.`,
+                  zh: `${f.id} 架次识别 ${d.detected} 头，登记 ${d.expected} 头，平均置信度 ${d.confidencePct}%。`,
+                },
           });
         }
         if (d.flagged > 0) {

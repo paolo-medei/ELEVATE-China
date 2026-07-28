@@ -259,8 +259,15 @@ export function RanchMap({
           const q = px(w.at);
           return (
             <g key={w.id}>
-              <circle cx={q.x} cy={q.y} r={7} fill="var(--seq-400)" fillOpacity={0.22} />
-              <circle cx={q.x} cy={q.y} r={3.4} fill="var(--seq-400)" stroke="var(--surface-1)" strokeWidth={1} />
+              <circle cx={q.x} cy={q.y} r={minimal ? 10 : 7} fill="var(--seq-400)" fillOpacity={0.22} />
+              <circle
+                cx={q.x}
+                cy={q.y}
+                r={minimal ? 5 : 3.4}
+                fill="var(--seq-400)"
+                stroke="var(--surface-1)"
+                strokeWidth={minimal ? 2 : 1}
+              />
               {!minimal && (
                 <text x={q.x} y={q.y + 17} textAnchor="middle" className="paddock-sublabel">
                   {b(w.name)}
@@ -271,7 +278,7 @@ export function RanchMap({
         })}
 
         {/* landmarks */}
-        {data.landmarks.map((l) => {
+        {!minimal && data.landmarks.map((l) => {
           const q = px(l.at);
           return (
             <g key={l.id}>
@@ -304,6 +311,7 @@ export function RanchMap({
               <text x={c.x} y={c.y - 4} textAnchor="middle" className="paddock-label">
                 {b(p.name)}
               </text>
+              {!minimal && (
               <text x={c.x} y={c.y + 9} textAnchor="middle" className="paddock-sublabel">
                 {layer === 'status' && pd
                   ? t(`state_${paddockState(pd)}` as 'state_ok')
@@ -315,6 +323,7 @@ export function RanchMap({
                       ? `${pd.restDays} d`
                       : `${p.areaHa} ${t('hectares')}`}
               </text>
+              )}
             </g>
           );
         })}
@@ -369,7 +378,14 @@ export function RanchMap({
                 strokeDasharray="3 3"
                 filter={s.offPaddock ? 'url(#soft)' : undefined}
               />
-              <circle cx={q.x} cy={q.y} r={r} fill={color} stroke="var(--surface-1)" strokeWidth={2} />
+              <circle
+                cx={q.x}
+                cy={q.y}
+                r={minimal ? Math.max(11, r) : r}
+                fill={color}
+                stroke="var(--surface-1)"
+                strokeWidth={2}
+              />
               {s.offPaddock && (
                 <circle
                   cx={q.x}
@@ -381,14 +397,25 @@ export function RanchMap({
                   strokeDasharray="3 3"
                 />
               )}
-              <text
-                x={q.x}
-                y={q.y - r - 5}
-                textAnchor="middle"
-                style={{ fill: 'var(--text-primary)', fontSize: 10.5, fontWeight: 650 }}
-              >
-                {herd.head}
-              </text>
+              {minimal ? (
+                <text
+                  x={q.x}
+                  y={q.y + 4}
+                  textAnchor="middle"
+                  style={{ fill: '#fff', fontSize: 12, fontWeight: 700 }}
+                >
+                  {herd.id.slice(1)}
+                </text>
+              ) : (
+                <text
+                  x={q.x}
+                  y={q.y - r - 5}
+                  textAnchor="middle"
+                  style={{ fill: 'var(--text-primary)', fontSize: 10.5, fontWeight: 650 }}
+                >
+                  {herd.head}
+                </text>
+              )}
             </g>
           );
         })}
@@ -462,6 +489,14 @@ export function RanchMap({
                   {t(`state_${st}` as 'state_ok')}
                 </span>
               ))}
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                <span
+                  className="legend-swatch"
+                  style={{ background: 'var(--seq-400)', borderRadius: '50%' }}
+                  aria-hidden="true"
+                />
+                {t('water')}
+              </span>
             </span>
           ) : layer === 'utilisation' ? (
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
