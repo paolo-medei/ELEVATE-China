@@ -7,6 +7,14 @@ import { useUi } from '../i18n';
 
 const SEQ = ['#cde2fb', '#9ec5f4', '#6da7ec', '#3987e5', '#256abf', '#184f95', '#0d366b'];
 
+/** one-hue green ramp, for the vegetation index where the hue itself carries meaning */
+const GREEN = ['#e6f0d4', '#c8e0a8', '#a3cd79', '#7ab353', '#559338', '#367326', '#1f5219'];
+
+export function useGreenRamp() {
+  const { theme } = useUi();
+  return theme === 'light' ? GREEN : [...GREEN].reverse();
+}
+
 export function useRamp() {
   const { theme } = useUi();
   // sequential = one hue, light→dark. On a dark surface the near-zero end is the

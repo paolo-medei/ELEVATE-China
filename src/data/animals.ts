@@ -1,6 +1,6 @@
 import { makeRng } from '../lib/rng';
 import { dist, pointInPolygon } from '../lib/geo';
-import { herds, paddockById } from './ranch';
+import { herds, paddockById, RANCH_H, RANCH_W } from './ranch';
 import type { Dataset, Pt } from './types';
 
 /** One ear-tagged animal. IDs read "1-042": herd number, then the animal's number in it. */
@@ -147,6 +147,18 @@ export function cowSnapshot(data: Dataset, day: number, hour: number): CowState[
         }
       }
 
+      const attention = ATTENTION.find((a) => a.cowId === cow.id && day >= a.fromDay);
+      if (attention) {
+        // drift toward the middle of the plateau so the animal is always on the map
+        const dx = RANCH_W / 2 - step.at.x;
+        const dy = RANCH_H / 2 - step.at.y;
+        const len = Math.hypot(dx, dy) || 1;
+        at = {
+          x: step.at.x + (dx / len) * attention.awayM - (dy / len) * attention.side,
+          y: step.at.y + (dy / len) * attention.awayM + (dx / len) * attention.side,
+        };
+      }
+
       const fromHerdM = dist(at, step.at);
       const detected = !gone.has(cow.id);
 
@@ -159,12 +171,14 @@ export function cowSnapshot(data: Dataset, day: number, hour: number): CowState[
         }
       }
 
-      const stillHours = herdDay
-        ? ((herdDay.budget.resting + herdDay.budget.ruminating) / 60) * (2 - cow.activity)
-        : 0;
+      const stillHours = attention
+        ? 20.5 + (cow.idx % 5) * 0.3
+        : herdDay
+          ? ((herdDay.budget.resting + herdDay.budget.ruminating) / 60) * (2 - cow.activity)
+          : 0;
       const flags: CowFlag[] = [];
       if (!detected) flags.push('notFound');
-      if (fromHerdM > step.spreadM * 1.15) flags.push('isolated');
+      if (attention || fromHerdM > step.spreadM * 1.15) flags.push('isolated');
       if (stillHours > 15.5) flags.push('stationary');
       if (flagged.has(cow.id)) flags.push('sick');
 
@@ -206,21 +220,69 @@ export const FLAG_SEVERITY: Record<CowFlag, 'critical' | 'serious' | 'warning'> 
 
 /** Missing once is a shadow under a tree; missing for days is a lost animal. */
 export function cowSeverity(state: CowState): 'critical' | 'serious' | 'warning' {
+  // away from the herd and barely moving is the combination that kills animals
+  if (state.flags.includes('isolated') && state.flags.includes('stationary')) return 'critical';
   if (!state.detected && state.lastSeenDaysAgo >= 3) return 'critical';
   if (state.flags.length === 0) return 'warning';
   return FLAG_SEVERITY[state.flags[0]];
 }
 
-/** Ground height in metres — the Xilingol plateau, with a few low ridges. */
+/**
+ * Ground height in metres. The Assy Plateau floor sits near 1,900 m and rises to the
+ * Zailiysky Alatau ridges in the south and the observatory shoulder in the north-west.
+ */
 const HILLS = [
-  { x: 2100, y: 1400, r: 2600, h: 96 },
-  { x: 8300, y: 3500, r: 3000, h: 78 },
-  { x: 5200, y: 5600, r: 2400, h: 44 },
-  { x: 10200, y: 900, r: 2000, h: 62 },
+  { x: 1700, y: 900, r: 2500, h: 690 }, // observatory shoulder
+  { x: 5400, y: 6600, r: 3200, h: 640 }, // Alatau ridge, south
+  { x: 9600, y: 1100, r: 2600, h: 430 }, // north-east ridge
+  { x: 7600, y: 3200, r: 2200, h: 180 },
 ];
 
 export const elevationAt = (p: Pt) =>
   Math.round(
-    1041 +
+    1905 +
       HILLS.reduce((a, h) => a + h.h * Math.exp(-((p.x - h.x) ** 2 + (p.y - h.y) ** 2) / (2 * h.r ** 2)), 0),
   );
+
+/**
+ * The two animals the demo is built around: they drift away from Herd 1 and stop moving,
+ * which is exactly the pattern a grazier wants flagged before it becomes a dead animal.
+ */
+export type DayAttention = {
+  day: number;
+  /** null when no mission counted that day, so the chart shows a gap rather than a spike */
+  missing: number | null;
+  needCheck: number;
+  isolated: number;
+  stationary: number;
+  sick: number;
+};
+
+let attentionCache: DayAttention[] | null = null;
+
+/**
+ * The same per-animal rules run across the whole season, so the history page counts the
+ * very same animals the dashboard is flagging today.
+ */
+export function attentionByDay(data: Dataset): DayAttention[] {
+  if (attentionCache) return attentionCache;
+  attentionCache = Array.from({ length: data.meta.days }, (_, day) => {
+    const states = cowSnapshot(data, day, 8);
+    const has = (f: CowFlag) => states.filter((c) => c.flags.includes(f)).length;
+    const counted = data.flights.some((f) => f.day === day && f.detections.length > 0);
+    return {
+      day,
+      missing: counted ? states.filter((c) => !c.detected).length : null,
+      needCheck: states.filter((c) => c.flags.some((f) => f !== 'notFound')).length,
+      isolated: has('isolated'),
+      stationary: has('stationary'),
+      sick: has('sick'),
+    };
+  });
+  return attentionCache;
+}
+
+export const ATTENTION: { cowId: string; fromDay: number; awayM: number; side: number }[] = [
+  { cowId: '1-118', fromDay: 112, awayM: 1180, side: 240 },
+  { cowId: '1-243', fromDay: 109, awayM: 980, side: -320 },
+];

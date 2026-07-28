@@ -728,8 +728,11 @@ export function buildDataset(): Dataset {
 
   return {
     meta: {
-      ranch: { en: 'Bayan Gol Demonstration Ranch', zh: '巴彦郭勒示范牧场' },
-      region: { en: 'Xilingol League, Inner Mongolia', zh: '内蒙古锡林郭勒盟' },
+      ranch: { en: 'Assy Plateau summer pasture', zh: '阿瑟高原夏季牧场' },
+      region: {
+        en: 'Enbekshikazakh District, Almaty Region',
+        zh: '阿拉木图州 恩别克什哈萨克区',
+      },
       startDate: dateForDay(0),
       days: DAYS,
       quotaSheepUnits: QUOTA_SHEEP_UNITS,

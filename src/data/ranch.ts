@@ -2,13 +2,17 @@ import { makeRng } from '../lib/rng';
 import { polygonCentroid, shoelaceArea } from '../lib/geo';
 import type { Herd, Landmark, Paddock, Pt, SoilClass, WaterPoint } from './types';
 
-/** Ranch extent in metres. The map is drawn in this local grid; lat/lon is derived. */
+/**
+ * Study area: the Assy Plateau (Ассы жайлауы), Enbekshikazakh District, Almaty Region,
+ * between the Turgen Gorge to the north-west and the Bartogai Reservoir to the east.
+ * A classic summer pasture (jailau) at 1,900–2,700 m, grazed June to September.
+ */
 export const RANCH_W = 10800;
 export const RANCH_H = 6480;
 
-export const ORIGIN = { lat: 44.0912, lon: 116.0184 }; // NW corner, Xilingol steppe
+export const ORIGIN = { lat: 43.2814, lon: 77.7396 }; // NW corner of the study area
 export const M_PER_DEG_LAT = 111_320;
-export const M_PER_DEG_LON = 80_000; // cos(44°) * 111.32 km
+export const M_PER_DEG_LON = 81_060; // cos(43.25°) * 111.32 km
 
 const COLS = 4;
 const ROWS = 3;
@@ -18,17 +22,19 @@ export const SEASON_DAYS = 120;
 /** Dry-matter intake per animal unit per day, including trampling and fouling losses. */
 export const INTAKE_KG_AU_DAY = 11.5;
 /**
- * Share of peak standing crop that may be removed across a season. Roughly half of the
- * edible yield, which is itself ~60% of standing crop — the rule of thumb behind China's
- * carrying-capacity standards for steppe.
+ * Share of peak standing crop that may be removed across a season — about half of the
+ * edible yield, which is itself roughly 60% of what is standing.
  */
 export const ALLOWABLE_USE = 0.3;
 
-/** Peak standing crop per steppe type, kg dry matter / ha. */
+/**
+ * Peak standing crop per pasture type on the plateau, kg dry matter / ha. Alpine meadow
+ * on the valley floors is the productive ground; the stony slopes carry far less.
+ */
 const CEILING: Record<SoilClass, number> = {
-  meadow: 1850,
-  typical: 1250,
-  sandy: 720,
+  meadow: 2250,
+  typical: 1550,
+  sandy: 780,
 };
 
 /**
@@ -42,14 +48,14 @@ const PADDOCK_SPEC: { name: { en: string; zh: string }; soil: SoilClass }[] = [
   { name: { en: 'Area 1', zh: '1 号草场' }, soil: 'typical' },
   { name: { en: 'Area 2', zh: '2 号草场' }, soil: 'meadow' },
   { name: { en: 'Area 3', zh: '3 号草场' }, soil: 'typical' },
-  { name: { en: 'Area 4', zh: '4 号草场' }, soil: 'sandy' },
+  { name: { en: 'Area 4', zh: '4 号草场' }, soil: 'typical' },
   { name: { en: 'Area 5', zh: '5 号草场' }, soil: 'sandy' },
   { name: { en: 'Area 6', zh: '6 号草场' }, soil: 'typical' },
   { name: { en: 'Area 7', zh: '7 号草场' }, soil: 'typical' },
   { name: { en: 'Area 8', zh: '8 号草场' }, soil: 'meadow' },
   { name: { en: 'Area 9', zh: '9 号草场' }, soil: 'meadow' },
   { name: { en: 'Area 10', zh: '10 号草场' }, soil: 'meadow' },
-  { name: { en: 'Area 11', zh: '11 号草场' }, soil: 'sandy' },
+  { name: { en: 'Area 11', zh: '11 号草场' }, soil: 'meadow' },
   { name: { en: 'Area 12', zh: '12 号草场' }, soil: 'typical' },
 ];
 
@@ -148,27 +154,25 @@ export const riverPath: Pt[] = [
 ];
 
 export const water: WaterPoint[] = [
-  { id: 'W1', name: { en: 'North Ridge well', zh: '北梁机井' }, kind: 'well', at: { x: 1180, y: 1230 } },
-  { id: 'W2', name: { en: 'Spring Pond', zh: '泉子泡子' }, kind: 'pond', at: { x: 4320, y: 1490 } },
-  { id: 'W3', name: { en: 'Stone Well & trough', zh: '石头井水槽' }, kind: 'well', at: { x: 4180, y: 3260 } },
-  { id: 'W4', name: { en: 'Salt Flat trough', zh: '碱滩水槽' }, kind: 'well', at: { x: 7250, y: 3120 } },
-  { id: 'W5', name: { en: 'Willow Draw spring', zh: '柳条沟泉' }, kind: 'pond', at: { x: 9820, y: 2740 } },
-  { id: 'W6', name: { en: 'River Bend crossing', zh: '河湾饮水点' }, kind: 'river', at: { x: 1500, y: 5460 } },
-  { id: 'W7', name: { en: 'South trough', zh: '南滩水槽' }, kind: 'well', at: { x: 8250, y: 5180 } },
-];
+  { id: 'W1', name: { en: 'Assy River ford', zh: '阿瑟河渡口' }, kind: 'river', at: { x: 2450, y: 4560 } },
+  { id: 'W2', name: { en: 'North spring', zh: '北泉' }, kind: 'pond', at: { x: 3980, y: 1320 } },
+  { id: 'W3', name: { en: 'Kuray spring', zh: '库赖泉' }, kind: 'pond', at: { x: 6900, y: 2680 } },
+  { id: 'W4', name: { en: 'Assy River bend', zh: '阿瑟河湾' }, kind: 'river', at: { x: 5600, y: 5180 } },
+  { id: 'W5', name: { en: 'Bartogai inlet', zh: '巴尔托盖水库入口' }, kind: 'river', at: { x: 9750, y: 5450 } },
+]
 
 export const landmarks: Landmark[] = [
-  { id: 'L1', name: { en: 'Home camp', zh: '牧户营地' }, kind: 'camp', at: { x: 5460, y: 5980 } },
-  { id: 'L2', name: { en: 'Drone pad', zh: '无人机起降点' }, kind: 'dronePad', at: { x: 5780, y: 5840 } },
-  { id: 'L3', name: { en: 'Handling yard', zh: '棚圈作业区' }, kind: 'handling', at: { x: 8600, y: 1120 } },
-];
+  { id: 'L1', name: { en: 'Summer camp', zh: '夏季牧点' }, kind: 'camp', at: { x: 4980, y: 4230 } },
+  { id: 'L2', name: { en: 'Drone pad', zh: '无人机起降点' }, kind: 'dronePad', at: { x: 5240, y: 4090 } },
+  { id: 'L3', name: { en: 'Assy-Turgen Observatory', zh: '阿瑟-图尔根天文台' }, kind: 'handling', at: { x: 1850, y: 980 } },
+]
 
 export const herds: Herd[] = [
   {
     id: 'H1',
     name: { en: 'Herd 1', zh: '1 号牛群' },
     breed: { en: 'Simmental × Mongolian', zh: '西门塔尔×蒙古牛' },
-    head: 540,
+    head: 405,
     auPerHead: 1.0,
     color: 'h1',
     rotation: ['P1', 'P5', 'P9'],
@@ -177,7 +181,7 @@ export const herds: Herd[] = [
     id: 'H2',
     name: { en: 'Herd 2', zh: '2 号牛群' },
     breed: { en: 'Angus × Mongolian', zh: '安格斯×蒙古牛' },
-    head: 470,
+    head: 355,
     auPerHead: 1.0,
     color: 'h2',
     rotation: ['P2', 'P6', 'P10'],
@@ -186,7 +190,7 @@ export const herds: Herd[] = [
     id: 'H3',
     name: { en: 'Herd 3', zh: '3 号牛群' },
     breed: { en: 'Simmental cross', zh: '西门塔尔杂交' },
-    head: 400,
+    head: 300,
     auPerHead: 0.7,
     color: 'h3',
     rotation: ['P3', 'P7', 'P11'],
@@ -195,7 +199,7 @@ export const herds: Herd[] = [
     id: 'H4',
     name: { en: 'Herd 4', zh: '4 号牛群' },
     breed: { en: 'Mongolian', zh: '蒙古牛' },
-    head: 345,
+    head: 260,
     auPerHead: 1.15,
     color: 'h4',
     rotation: ['P4', 'P8', 'P12'],
