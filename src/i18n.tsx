@@ -240,7 +240,13 @@ const I18nContext = createContext<Ctx | null>(null);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [lang, setLang] = useState<Lang>('en');
-  const [theme, setTheme] = useState<Theme>('dark');
+  // respect a theme the host page already committed to, then the OS preference
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof document === 'undefined') return 'dark';
+    const stamped = document.documentElement.dataset.theme;
+    if (stamped === 'light' || stamped === 'dark') return stamped;
+    return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  });
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
