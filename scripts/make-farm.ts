@@ -35,8 +35,8 @@ const weather = buildWeather(makeRng(880517)).map((w) => ({
 
 const farm = {
   $readme: {
-    what: 'Input database for PastureWatch. Every number, map, chart and alert in the app is computed from this file — nothing else is stored.',
-    how: 'Edit a value, then load this file back through the Data menu in the app (Data → Load an edited file).',
+    what: "Input database for Farmers' Wingman. Every number, map, chart and alert in the app is computed from this file — nothing else is stored.",
+    how: 'Most people should use the spreadsheet instead: in the app, Data → Get the Excel file. To edit this file directly, change a value and load it back under Data → For developers.',
     meta: 'Where the pasture is and how big it is. gridCols × gridRows must equal the number of areas; layoutSeed redraws the fence lines.',
     season: 'First day of grazing and how many days it runs. weather must have at least that many entries.',
     forage: 'The grass budget. peakGrassKgPerHa sets how much each pasture type grows; allowableUse and intake set how many animals a hectare can carry.',

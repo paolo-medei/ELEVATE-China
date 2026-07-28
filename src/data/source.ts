@@ -7,7 +7,7 @@ import defaultFarm from './farm.json';
  */
 export type Farm = typeof defaultFarm;
 
-const KEY = 'pasturewatch.farm';
+const KEY = 'farmerswingman.farm';
 
 function readOverride(): Farm | null {
   if (typeof localStorage === 'undefined') return null;

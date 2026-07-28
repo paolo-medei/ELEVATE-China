@@ -1950,3 +1950,38 @@ table.data tbody tr:hover td {
   border-radius: 8px;
   padding: 7px 9px;
 }
+
+.ghost-btn.primary {
+  background: var(--surface-3);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+  font-weight: 560;
+}
+
+.data-panel-more {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.data-panel-more summary {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  cursor: pointer;
+  list-style: none;
+}
+
+.data-panel-more summary::-webkit-details-marker {
+  display: none;
+}
+
+.data-panel-more summary::before {
+  content: '▸ ';
+}
+
+.data-panel-more[open] summary::before {
+  content: '▾ ';
+}
+
+.data-panel-more .data-panel-actions {
+  padding-top: 8px;
+}

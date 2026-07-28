@@ -1,5 +1,5 @@
 {
-  "name": "elevate-china-pasture-watch",
+  "name": "elevate-china-farmers-wingman",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -10,11 +10,14 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "standalone": "npm run build && node scripts/standalone.mjs",
-    "make-farm": "esbuild scripts/make-farm.ts --bundle --format=esm --platform=node --outfile=node_modules/.cache/make-farm.mjs --log-level=warning && node node_modules/.cache/make-farm.mjs"
+    "make-farm": "esbuild scripts/make-farm.ts --bundle --format=esm --platform=node --outfile=node_modules/.cache/make-farm.mjs --log-level=warning && node node_modules/.cache/make-farm.mjs",
+    "make-xlsx": "esbuild scripts/make-xlsx.ts --bundle --format=esm --platform=node --packages=external --outfile=node_modules/.cache/make-xlsx.mjs --log-level=warning && node node_modules/.cache/make-xlsx.mjs"
   },
   "dependencies": {
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "read-excel-file": "^9.3.4",
+    "write-excel-file": "^4.1.1"
   },
   "devDependencies": {
     "@types/react": "^19.1.9",

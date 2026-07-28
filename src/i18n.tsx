@@ -5,7 +5,7 @@ export type Lang = 'en' | 'zh';
 export type Theme = 'dark' | 'light';
 
 const DICT = {
-  appName: { en: 'PastureWatch', zh: '牧眼' },
+  appName: { en: "Farmers' Wingman", zh: '牧民帮手' },
   appTagline: {
     en: 'Drone herd intelligence & grassland balance',
     zh: '无人机牛群识别与草畜平衡监测',
@@ -17,21 +17,25 @@ const DICT = {
 
   // the input database
   dataMenu: { en: 'Data', zh: '数据' },
-  dataTitle: { en: 'Input database', zh: '输入数据库' },
+  dataTitle: { en: 'Change the data', zh: '修改数据' },
   dataIntro: {
-    en: 'Everything on screen is calculated from one file, farm.json. Download it, change a value, load it back, and the whole app follows.',
-    zh: '页面上的全部内容都由 farm.json 一个文件计算得出。下载文件、修改数值、再载入，全站结果即随之更新。',
+    en: 'Everything you see is worked out from one small database. Get it as an Excel file, change what you like, load it back — the whole app follows.',
+    zh: '页面上的全部内容都由一个小型数据库计算得出。下载 Excel 文件、随意修改、再载入，全站结果即随之更新。',
   },
+  dataDownloadXl: { en: 'Get the Excel file', zh: '下载 Excel 文件' },
+  dataLoadXl: { en: 'Load your Excel file', zh: '载入你的 Excel 文件' },
+  dataReset: { en: 'Back to the original data', zh: '恢复原始数据' },
+  dataCustom: { en: 'Your own data is in use', zh: '正在使用你修改的数据' },
+  dataOriginal: { en: 'Original data in use', zh: '正在使用原始数据' },
+  dataBadge: { en: 'Your data', zh: '自定义数据' },
+  dataSheets: {
+    en: 'Five sheets: Farm · Areas · Herds · Animals to watch · Weather. Change a cell, save the file, load it back.',
+    zh: '五个工作表：Farm（牧场）· Areas（草场）· Herds（牛群）· Animals to watch（关注牛只）· Weather（天气）。修改单元格后保存并载入。',
+  },
+  dataReading: { en: 'Reading the file…', zh: '正在读取文件…' },
+  dataAdvanced: { en: 'For developers', zh: '开发者选项' },
   dataDownload: { en: 'Download farm.json', zh: '下载 farm.json' },
-  dataLoad: { en: 'Load an edited file', zh: '载入修改后的文件' },
-  dataReset: { en: 'Back to the original file', zh: '恢复原始文件' },
-  dataCustom: { en: 'Edited database in use', zh: '正在使用修改后的数据库' },
-  dataOriginal: { en: 'Original database in use', zh: '正在使用原始数据库' },
-  dataBadge: { en: 'Edited data', zh: '已改数据' },
-  dataHint: {
-    en: 'Try: herds[0].head, areas[4].pasture (meadow / typical / sandy), weather[119].windMs, or animalEvents.',
-    zh: '可尝试修改：herds[0].head、areas[4].pasture（meadow / typical / sandy）、weather[119].windMs 或 animalEvents。',
-  },
+  dataLoad: { en: 'Load a JSON file', zh: '载入 JSON 文件' },
   dataBad: { en: 'File not loaded: {why}', zh: '文件未载入：{why}' },
   close: { en: 'Close', zh: '关闭' },
 

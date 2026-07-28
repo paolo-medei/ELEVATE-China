@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const dist = path.resolve('dist/assets');
-const out = path.resolve('PastureWatch.html');
+const out = path.resolve('FarmersWingman.html');
 
 if (!fs.existsSync(dist)) {
   console.error('dist/assets not found — run `npm run build` first.');
@@ -45,7 +45,7 @@ const html = `<!doctype html>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>PastureWatch · Assy Plateau</title>
+<title>Farmers' Wingman · Assy Plateau</title>
 <meta name="description" content="Drone herd monitoring demo for the Assy Plateau summer pasture." />
 <link rel="icon" href="${favicon}" />
 <style>
@@ -64,8 +64,9 @@ ${script}
 fs.writeFileSync(out, html);
 console.log(`${path.relative(process.cwd(), out)} — ${(html.length / 1024).toFixed(0)} KB, opens offline in any browser`);
 
-// the app and the database it reads travel together: farm.json sits beside the .html so a
+// the app and the data it reads travel together: farm.json sits beside the .html so a
 // grazier can open one, edit the other, and load it straight back in
 const db = fs.readFileSync(path.resolve('src/data/farm.json'), 'utf8');
 fs.writeFileSync(path.resolve('farm.json'), db);
 console.log(`farm.json — ${(db.length / 1024).toFixed(0)} KB, the input database the app reads`);
+console.log('run `npm run make-xlsx` to refresh farm-data.xlsx, the Excel view of it');

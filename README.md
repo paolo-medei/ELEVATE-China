@@ -1,4 +1,4 @@
-# ELEVATE-China — PastureWatch
+# ELEVATE-China — Farmers' Wingman
 
 Drone-based cattle monitoring for a mountain summer pasture, down to the individual animal.
 
@@ -15,7 +15,7 @@ tiles. Reload gives the same season every time.
 
 ## Run it
 
-**No install:** open `PastureWatch.html` — a single self-contained file in this repo. Double-click it
+**No install:** open `FarmersWingman.html` — a single self-contained file in this repo. Double-click it
 and it runs in any browser, offline. Everything is inlined: the interface, the simulated season, the
 map. Nothing is fetched from the network.
 
@@ -25,35 +25,42 @@ map. Nothing is fetched from the network.
 npm install
 npm run dev         # http://localhost:5173
 npm run build       # type-check + production bundle into dist/
-npm run standalone  # rebuild PastureWatch.html + farm.json, the downloadable pair
+npm run standalone  # rebuild FarmersWingman.html + farm.json, the downloadable pair
 npm run make-farm   # regenerate src/data/farm.json from the model defaults
 ```
 
-## The input database — `farm.json`
+## Changing the data — in Excel
 
-The app has **one input file**: [`farm.json`](farm.json) (the working copy lives at
-`src/data/farm.json`). Nothing else is stored — every count, position, chart, alert and colour on
-screen is calculated from it. Change a value and the whole interface changes with it.
+Every count, position, chart, alert and colour on screen is calculated from **one small database**.
+Nothing else is stored. Change a value and the whole interface changes with it — and the way to
+change it is a spreadsheet.
 
-**How to edit it:** open the app → **Data** in the top bar → **Download farm.json** → edit it in any
-text editor → **Load an edited file**. The page reloads and recomputes the season. **Back to the
-original file** undoes everything. A badge in the header shows when an edited database is in force.
-An unusable file is refused with the reason and the current one is kept.
+**In the app:** **Data** in the top bar → **Get the Excel file** → open `farm-data.xlsx` in Excel (or
+Numbers, or LibreOffice) → change any cell → save → **Load your Excel file**. The page recomputes the
+season from what you saved. **Back to the original data** undoes everything, and a badge in the
+header shows when your own data is in force.
 
-| Section | What it sets | Try changing |
+The workbook has five sheets:
+
+| Sheet | One row per | Try changing |
 |---|---|---|
-| `meta` | where the pasture is, how big, how the areas are laid out | `layoutSeed` redraws every fence line |
-| `season` | first day of grazing and how many days it runs | `days: 60` for a short season |
-| `forage` | how much grass each pasture type grows, intake per animal, safe offtake | `peakGrassKgPerHa.meadow` |
-| `flights` | drone hours, the wind limits that ground or shorten a mission, miss rate | `groundedAboveWindMs: 6` grounds most of the season |
-| `areas` | one entry per area, each `meadow` / `typical` / `sandy` | make an area `sandy` and watch its Green Index fall and an overgrazing alert appear |
-| `herds` | herd size, the areas it rotates through, days per area, where the cycle starts | `head`, `rotation`, `daysPerArea` |
-| `animalEvents` | the individual animals flagged: `lost`, `needsAttention`, `separated`, `welfare` | add a cow id and a `fromDay` |
-| `weather` | one row per day — rain, temperature, wind | set a `windMs` above 11 and that day's flight is grounded, the count carries over, and the alert follows |
+| **Farm** | setting, as label + value | *Season length*, the wind limits, *Grass on best pasture*, *Map layout number* (redraws every fence line) |
+| **Areas** | grazing area, with its grass type `meadow` / `typical` / `sandy` | make an area `sandy` — its Green Index falls and an overgrazing alert appears |
+| **Herds** | herd: cattle, which areas it grazes, days in each, where the cycle starts | *Cattle*, or `2, 6, 10` in *Grazes areas* |
+| **Animals to watch** | flagged animal: *Lost* / *Needs attention* / *Drifted from the group* / *Health check* | add a row with a cow ID like `2-050` and the day it started |
+| **Weather** | day: rain, temperature, wind | set a wind above 11 m/s and that day's flight is grounded, the count carries over, and the alert follows |
 
-Worked example: setting every area to `sandy` takes the Green Index from 0.32 to 0.26 and the job
-list from 6 items to 13; cutting `herds[0].head` from 405 to 120 takes the registered total from
-1,320 to 1,035 across every screen.
+Add or delete rows freely — herds, areas and flagged animals are read from whatever rows are there.
+A sheet you leave alone keeps its current values, and a value that cannot work is refused with the
+sheet and row that caused it (*"Areas row 4: 'concrete' is not a grass type"*), leaving the current
+data untouched.
+
+Worked example: cutting Herd 1 from 405 to 150 cattle takes the registered total from 1,320 to 1,065
+on every screen; setting one day's wind to 14.2 m/s moves *last drone flight* back to the day before;
+renaming the farm changes the header.
+
+**Under the bonnet** the app reads [`farm.json`](farm.json) (working copy: `src/data/farm.json`); the
+spreadsheet is a view onto it. *Data → For developers* downloads and loads the JSON directly.
 
 ## The three screens
 
@@ -110,17 +117,18 @@ Three things the demo is careful about, because each would cost a farmer a waste
 ## Project layout
 
 ```
-farm.json      the input database, next to PastureWatch.html
+farm.json      the input database, next to FarmersWingman.html
 src/
-  data/        farm.json (input database), source.ts (loads it), ranch.ts (geography &
-               herds), simulate.ts (the season), animals.ts (individual animals)
+  data/        farm.json (input database), source.ts (loads it), workbook.ts (the Excel
+               view of it), ranch.ts (geography & herds), simulate.ts (the season),
+               animals.ts (individual animals)
   lib/         seeded PRNG, geometry, area status rules, the issue builder, formatting
-  components/  HerdMap (terrain + animals), DataPanel (the database drawer), chart kit, UI atoms
+  components/  HerdMap (terrain + animals), DataPanel (the data drawer), chart kit, UI atoms
   views/       TodayView · AlertsView · HistoryView
   i18n.tsx     EN/中文 dictionary, language + theme context
 scripts/
   make-farm.ts     regenerates src/data/farm.json
-  standalone.mjs   inlines the build into PastureWatch.html
+  standalone.mjs   inlines the build into FarmersWingman.html
 ```
 
 > Demonstration dataset. The herds, flights and weather are simulated; the geography, the model
