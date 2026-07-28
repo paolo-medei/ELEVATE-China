@@ -1,0 +1,272 @@
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import type { Bilingual } from './data/types';
+
+export type Lang = 'en' | 'zh';
+export type Theme = 'dark' | 'light';
+
+const DICT = {
+  appName: { en: 'PastureWatch', zh: '牧眼' },
+  appTagline: {
+    en: 'Drone herd intelligence & grassland balance',
+    zh: '无人机牛群识别与草畜平衡监测',
+  },
+  demoBanner: {
+    en: 'Demonstration dataset — simulated season',
+    zh: '演示数据 · 模拟牧季',
+  },
+
+  // views
+  navOps: { en: 'Herd operations', zh: '牛群作业' },
+  navGrass: { en: 'Grassland', zh: '草场管理' },
+  navDrone: { en: 'Drone missions', zh: '无人机任务' },
+  navGov: { en: 'Governance', zh: '监管与草畜平衡' },
+
+  // controls
+  play: { en: 'Play day', zh: '播放' },
+  pause: { en: 'Pause', zh: '暂停' },
+  day: { en: 'Day', zh: '日期' },
+  hour: { en: 'Hour', zh: '时刻' },
+  today: { en: 'Latest day', zh: '最新一天' },
+  theme: { en: 'Theme', zh: '主题' },
+  language: { en: '中文', zh: 'EN' },
+  exportCsv: { en: 'Export CSV', zh: '导出 CSV' },
+  exportReport: { en: 'Export compliance report', zh: '导出监管报表' },
+  tableView: { en: 'Table', zh: '数据表' },
+  chartView: { en: 'Chart', zh: '图表' },
+
+  // KPI
+  kpiDetected: { en: 'Head detected', zh: '航拍识别头数' },
+  kpiDetectedFoot: { en: 'of {n} registered', zh: '登记 {n} 头' },
+  kpiUnaccounted: { en: 'Unaccounted', zh: '未清点头数' },
+  kpiGrazing: { en: 'Grazing time', zh: '日采食时长' },
+  kpiDistance: { en: 'Distance walked', zh: '日行走距离' },
+  kpiBiomass: { en: 'Standing biomass', zh: '现存生物量' },
+  kpiHealth: { en: 'Grassland health', zh: '草场健康指数' },
+  kpiStocking: { en: 'Stocking vs quota', zh: '载畜量 / 核定量' },
+  kpiOpenAlerts: { en: 'Open alerts', zh: '待处理预警' },
+  perHead: { en: 'herd average', zh: '牛群平均' },
+  ranchWide: { en: 'ranch average', zh: '全场平均' },
+
+  // map
+  mapTitle: { en: 'Ranch map', zh: '牧场地图' },
+  mapSub: {
+    en: 'Paddock boundaries, tracked herd positions and grazing pressure',
+    zh: '围栏草场、牛群定位与放牧强度',
+  },
+  layerPressure: { en: 'Grazing pressure', zh: '放牧强度' },
+  layerBiomass: { en: 'Biomass', zh: '生物量' },
+  layerUtilisation: { en: 'Utilisation', zh: '利用率' },
+  layerRest: { en: 'Rest days', zh: '休牧天数' },
+  layerNone: { en: 'Plain', zh: '底图' },
+  showTrails: { en: 'Trails', zh: '轨迹' },
+  showFlight: { en: 'Flight path', zh: '航线' },
+  legendLow: { en: 'low', zh: '低' },
+  legendHigh: { en: 'high', zh: '高' },
+  underUsed: { en: 'under-used', zh: '利用不足' },
+  atTarget: { en: 'at allowance', zh: '用满额度' },
+  overUsed: { en: 'over-used', zh: '过牧' },
+
+  // herds
+  herds: { en: 'Herds', zh: '牛群' },
+  herdsSub: { en: 'Tracked groups and their current paddock', zh: '在册牛群及当前所在草场' },
+  head: { en: 'head', zh: '头' },
+  breed: { en: 'Breed', zh: '品种' },
+  paddock: { en: 'Paddock', zh: '草场' },
+  state: { en: 'Behaviour', zh: '行为' },
+  spread: { en: 'Herd spread', zh: '群体分散度' },
+  position: { en: 'Position', zh: '坐标' },
+
+  // behaviour
+  grazing: { en: 'Grazing', zh: '采食' },
+  ruminating: { en: 'Ruminating', zh: '反刍' },
+  resting: { en: 'Resting', zh: '休息' },
+  travelling: { en: 'Travelling', zh: '行走' },
+  watering: { en: 'Watering', zh: '饮水' },
+
+  behaviourTitle: { en: 'Daily behaviour budget', zh: '每日行为时间分配' },
+  behaviourSub: {
+    en: 'Hours per animal per day, averaged across tracked herds',
+    zh: '各牛群平均每头每日小时数',
+  },
+  distanceTitle: { en: 'Distance walked per day', zh: '每日行走距离' },
+  distanceSub: { en: 'Kilometres travelled by each herd', zh: '各牛群每日行走公里数' },
+  countTitle: { en: 'Aerial count reconciliation', zh: '航拍清点核对' },
+  countSub: {
+    en: 'Detected head vs. registered herd book, by day',
+    zh: '每日航拍识别头数与在册头数对比',
+  },
+  registered: { en: 'Registered', zh: '在册头数' },
+  detected: { en: 'Detected', zh: '识别头数' },
+  confidence: { en: 'Mean confidence', zh: '平均置信度' },
+
+  // alerts
+  alerts: { en: 'Alerts', zh: '预警' },
+  alertsSub: { en: 'Rules run on every flight and every track', zh: '基于航拍与轨迹的规则告警' },
+  allDays: { en: 'Season', zh: '整个牧季' },
+  selectedDay: { en: 'Selected day', zh: '所选日期' },
+  noAlerts: { en: 'No alerts for this day.', zh: '当日无预警。' },
+  countMismatch: { en: 'Count mismatch', zh: '数量不符' },
+  fenceBreach: { en: 'Fence breach', zh: '越界' },
+  overgrazing: { en: 'Overgrazing', zh: '过牧' },
+  waterGap: { en: 'Watering gap', zh: '饮水异常' },
+  heatStress: { en: 'Heat stress', zh: '热应激' },
+  animalWelfare: { en: 'Welfare flag', zh: '个体异常' },
+  restViolation: { en: 'Rest period', zh: '休牧不足' },
+
+  // grassland
+  grassTitle: { en: 'Paddock condition', zh: '草场状况' },
+  grassSub: {
+    en: 'Standing biomass, utilisation and rest for every paddock',
+    zh: '各围栏草场的生物量、利用率与休牧情况',
+  },
+  biomassTrendTitle: { en: 'Biomass and rainfall', zh: '生物量与降水' },
+  biomassTrendSub: {
+    en: 'Ranch mean standing crop against daily rainfall',
+    zh: '全场平均现存生物量与日降水量',
+  },
+  rainfall: { en: 'Rainfall', zh: '降水' },
+  biomass: { en: 'Biomass', zh: '生物量' },
+  ndvi: { en: 'NDVI', zh: '植被指数' },
+  utilisation: { en: 'Utilisation', zh: '利用率' },
+  allowance: { en: 'Forage allowance', zh: '可利用额度' },
+  atAllowance: { en: 'at allowance', zh: '用满额度' },
+  restDays: { en: 'Rest days', zh: '休牧天数' },
+  utilTitle: { en: 'Utilisation by paddock', zh: '各草场利用率' },
+  utilSub: {
+    en: 'Season offtake against the forage each paddock can safely give up — 100% is the full allowance',
+    zh: '牧季累计采食量占可安全利用牧草量的比例，100% 即用满额度',
+  },
+  heatTitle: { en: 'Utilisation calendar', zh: '利用率日历' },
+  heatSub: {
+    en: 'Paddock × day across the grazing season — click a cell to jump to that day',
+    zh: '草场 × 牧季日期，点击可跳转至当日',
+  },
+  rotationTitle: { en: 'Rotation plan', zh: '轮牧计划' },
+  rotationSub: { en: 'Which herd is in which paddock, by day', zh: '各草场每日放牧牛群' },
+  stockingTitle: { en: 'Stocking vs carrying capacity', zh: '实际载畜量与理论承载力' },
+  stockingSub: {
+    en: 'Animal units per hectare against the approved capacity of each paddock',
+    zh: '各草场每公顷载畜量与核定承载力对比',
+  },
+  capacity: { en: 'Capacity', zh: '核定承载力' },
+  stocking: { en: 'Stocking', zh: '实际载畜' },
+  soilMeadow: { en: 'Meadow steppe', zh: '草甸草原' },
+  soilTypical: { en: 'Typical steppe', zh: '典型草原' },
+  soilSandy: { en: 'Sandy steppe', zh: '沙化草地' },
+
+  // drone
+  fleetTitle: { en: 'Mission log', zh: '飞行日志' },
+  sortiesFlown: { en: 'Sorties flown', zh: '已飞架次' },
+  fleetSub: { en: 'Two sorties a day: dawn muster count, evening pasture sweep', zh: '每日两架次：清晨清点、傍晚草场巡查' },
+  flightId: { en: 'Flight', zh: '架次' },
+  status: { en: 'Status', zh: '状态' },
+  complete: { en: 'Complete', zh: '完成' },
+  partial: { en: 'Shortened', zh: '缩短' },
+  aborted: { en: 'Grounded', zh: '取消' },
+  coverage: { en: 'Coverage', zh: '覆盖面积' },
+  duration: { en: 'Duration', zh: '时长' },
+  images: { en: 'Frames', zh: '影像' },
+  battery: { en: 'Battery', zh: '电量消耗' },
+  wind: { en: 'Wind', zh: '风速' },
+  temp: { en: 'Temp', zh: '气温' },
+  coverageTitle: { en: 'Area surveyed per day', zh: '每日巡查面积' },
+  coverageSub: { en: 'Hectares imaged, split by mission outcome', zh: '按任务结果划分的巡查公顷数' },
+  accuracyTitle: { en: 'Detection performance', zh: '识别性能' },
+  accuracySub: {
+    en: 'Share of registered animals detected, and model confidence',
+    zh: '识别率与模型置信度',
+  },
+  detectionRate: { en: 'Detection rate', zh: '识别率' },
+  targetLine: { en: 'Service target 97%', zh: '服务目标 97%' },
+
+  // governance
+  govTitle: { en: 'Grass–livestock balance', zh: '草畜平衡' },
+  govSub: {
+    en: 'Ranch stocking measured in sheep units against the approved quota',
+    zh: '以羊单位计量的实际载畜量与核定载畜量',
+  },
+  quota: { en: 'Approved quota', zh: '核定载畜量' },
+  actual: { en: 'Actual stocking', zh: '实际载畜量' },
+  sheepUnits: { en: 'sheep units', zh: '羊单位' },
+  compliant: { en: 'Within quota', zh: '未超载' },
+  overstocked: { en: 'Overstocked', zh: '超载' },
+  overloadRate: { en: 'Overload rate', zh: '超载率' },
+  healthTitle: { en: 'Grassland health index', zh: '草场健康指数' },
+  healthSub: {
+    en: 'Composite of standing crop, utilisation and rest — 0 to 100',
+    zh: '生物量、利用率与休牧的综合指数（0–100）',
+  },
+  degradedTitle: { en: 'Area under pressure', zh: '受压草场面积' },
+  degradedSub: {
+    en: 'Hectares that have used more than 85% of their forage allowance, by day',
+    zh: '每日采食量超过可利用额度 85% 的草场面积',
+  },
+  complianceSummary: { en: 'Compliance summary', zh: '合规摘要' },
+  ruleBalance: { en: 'Grass–livestock balance', zh: '草畜平衡制度' },
+  ruleRest: { en: 'Rest-rotation compliance', zh: '休牧轮牧执行' },
+  ruleMonitoring: { en: 'Monitoring coverage', zh: '监测覆盖率' },
+  rulePassed: { en: 'Met', zh: '达标' },
+  ruleWatch: { en: 'Watch', zh: '关注' },
+  ruleFailed: { en: 'Not met', zh: '未达标' },
+  govNote: {
+    en: 'Figures are derived from drone counts and tracked positions, not from self-reported head counts — the same evidence base can support subsidy verification and seasonal grazing bans.',
+    zh: '数据来源于无人机识别与轨迹监测，而非人工申报，可用于禁牧休牧核查与补奖资金发放依据。',
+  },
+
+  // shared
+  paddocks: { en: 'paddocks', zh: '个草场' },
+  hectares: { en: 'ha', zh: '公顷' },
+  km: { en: 'km', zh: '公里' },
+  hours: { en: 'h', zh: '小时' },
+  dayShort: { en: 'D', zh: '第' },
+  of: { en: 'of', zh: '/' },
+  seasonToDate: { en: 'season to date', zh: '牧季累计' },
+  season: { en: 'Grazing season', zh: '牧季' },
+  vsPrev: { en: 'vs previous day', zh: '较前一日' },
+} as const;
+
+export type DictKey = keyof typeof DICT;
+
+type Ctx = {
+  lang: Lang;
+  setLang: (l: Lang) => void;
+  theme: Theme;
+  setTheme: (t: Theme) => void;
+  t: (k: DictKey, vars?: Record<string, string | number>) => string;
+  b: (v: Bilingual | undefined) => string;
+};
+
+const I18nContext = createContext<Ctx | null>(null);
+
+export function I18nProvider({ children }: { children: ReactNode }) {
+  const [lang, setLang] = useState<Lang>('en');
+  const [theme, setTheme] = useState<Theme>('dark');
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+  }, [theme, lang]);
+
+  const value = useMemo<Ctx>(
+    () => ({
+      lang,
+      setLang,
+      theme,
+      setTheme,
+      t: (k, vars) => {
+        let s: string = DICT[k]?.[lang] ?? k;
+        if (vars) for (const [key, v] of Object.entries(vars)) s = s.replace(`{${key}}`, String(v));
+        return s;
+      },
+      b: (v) => (v ? v[lang] : ''),
+    }),
+    [lang, theme],
+  );
+  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
+}
+
+export function useUi() {
+  const ctx = useContext(I18nContext);
+  if (!ctx) throw new Error('useUi must be used inside I18nProvider');
+  return ctx;
+}
