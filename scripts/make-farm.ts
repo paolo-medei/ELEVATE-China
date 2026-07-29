@@ -9,12 +9,12 @@
  */
 import { writeFileSync } from 'node:fs';
 import { makeRng } from '../src/lib/rng';
-import { buildWeather, DAYS, START_DATE } from '../src/data/simulate';
+import { buildWeather, START_DATE } from '../src/data/simulate';
 import {
   ALLOWABLE_USE,
   INTAKE_KG_AU_DAY,
-  LOST_ANIMALS,
   ORIGIN,
+  SEASON_DAYS,
   RANCH_H,
   RANCH_W,
   ROTATION,
@@ -23,9 +23,9 @@ import {
   paddocks,
   water,
 } from '../src/data/ranch';
-import { ATTENTION, SEPARATED, WELFARE } from '../src/data/animals';
 
-const weather = buildWeather(makeRng(880517)).map((w) => ({
+// the file holds the whole planned grazing period; the app reads it up to today
+const weather = buildWeather(makeRng(880517), SEASON_DAYS).map((w) => ({
   day: w.day,
   date: w.date,
   rainMm: w.rainMm,
@@ -43,7 +43,7 @@ const farm = {
     flights: 'Drone schedule and limits. The first hour is the counting mission; wind above groundedAboveWindMs cancels the day, above shortenedAboveWindMs cuts it short. baseMissRate is how often a visible animal is missed.',
     areas: 'One entry per grazing area. pasture is meadow (best), typical, or sandy (poorest) — change it and the grass, the Green Index and the overgrazing alerts all move.',
     herds: 'Herd size, the areas it rotates through, how many days it stays in each, and where in the cycle it starts.',
-    animalEvents: 'The individual animals the system flags. lost = gone and still gone; needsAttention = drifted off and stopped moving; separated = away from the mob but fine; welfare = flagged by how it moves.',
+    animalEvents: 'Who the system flags. lost = gone and still gone. The perDay rates open new incidents day by day, each lasting a few days, so today\'s list is never yesterday\'s; the lists name a particular animal on a particular day on top of that.',
     weather: 'One row per day. Rain drives grass growth, temperature drives grazing hours, wind decides whether the drone flies.',
   },
 
@@ -60,7 +60,7 @@ const farm = {
     layoutSeed: 20260615,
   },
 
-  season: { startDate: START_DATE.toISOString().slice(0, 10), days: DAYS },
+  season: { startDate: START_DATE.toISOString().slice(0, 10), days: SEASON_DAYS },
 
   forage: {
     allowableUse: ALLOWABLE_USE,
@@ -92,12 +92,22 @@ const farm = {
     rotationOffset: ROTATION[i].offset,
   })),
 
-  /** the animals the demo is built around — change ids or days to move the story */
+  /**
+   * Who the system flags, and how often.
+   *
+   * `lost` animals stay lost — that is the case the whole thing exists for. Everything
+   * else comes and goes: the rates below open new incidents day by day, each lasting a
+   * few days, so today's list is never yesterday's. The four lists are for naming a
+   * particular animal on a particular day on top of that.
+   */
   animalEvents: {
-    lost: LOST_ANIMALS,
-    needsAttention: ATTENTION,
-    separated: SEPARATED,
-    welfare: WELFARE,
+    seed: 5150724,
+    /** chance of a new incident of each kind opening on any given day */
+    perDay: { needsAttention: 0.55, separated: 0.75, welfare: 0.4 },
+    lost: [{ cowId: '3-201', herdId: 'H3', fromDay: 34 }],
+    needsAttention: [] as { cowId: string; fromDay: number; days: number; awayM: number; side: number }[],
+    separated: [] as { cowId: string; fromDay: number; days: number; awayM: number; side: number }[],
+    welfare: [] as { cowId: string; fromDay: number; days: number }[],
   },
 
   waterPoints: water.map((w) => ({ id: w.id, name: w.name, kind: w.kind, x: w.at.x, y: w.at.y })),

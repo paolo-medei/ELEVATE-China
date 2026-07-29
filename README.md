@@ -13,6 +13,10 @@ carrying 1,320 cattle in four herds (**Herd 1–4**).
 Everything runs against a **deterministic simulated season** — no backend, no API keys, no map
 tiles. Reload gives the same season every time.
 
+The season runs from its start date in the database **up to today, never past it**: a monitoring
+system is a log of what has been flown, not a forecast. Opening the app on 29 July 2026 shows a
+season two months old and still running, with this morning's flight as the last one.
+
 ## Run it
 
 **On the web:** the app is published with GitHub Pages from the [`docs/`](docs) folder —
@@ -30,7 +34,7 @@ npm run dev         # http://localhost:5173
 npm run build       # type-check + production bundle into dist/
 npm run standalone  # rebuild FarmersWingman.html + farm.json, the downloadable pair
 npm run make-farm   # regenerate src/data/farm.json from the model defaults
-npm run make-xlsx   # rebuild farm-data.xlsx (add `-- season` for all 303,600 rows)
+npm run make-xlsx   # rebuild farm-data.xlsx (add `-- season` for the whole season to date)
 ```
 
 ## Changing the data — in Excel
@@ -49,27 +53,36 @@ generated from:
 
 | Sheet | One row per | Try changing |
 |---|---|---|
-| **Farm** | setting, as label + value | *Season length*, the wind limits, *Grass on best pasture*, *Map layout number* (redraws every fence line) |
+| **Farm** | setting, as label + value | *Season length*, the wind limits, *Grass on best pasture*, *Map layout number* (redraws every fence line), and how many animals get flagged per day |
 | **Areas** | grazing area, with its grass type `meadow` / `typical` / `sandy` | make an area `sandy` — its Green Index falls and an overgrazing alert appears |
 | **Herds** | herd: cattle, which areas it grazes, days in each, where the cycle starts | *Cattle*, or `2, 6, 10` in *Grazes areas* |
-| **Animals to watch** | flagged animal: *Lost* / *Needs attention* / *Drifted from the group* / *Health check* | add a row with a cow ID like `2-050` and the day it started |
+| **Animals to watch** | animal flagged by hand: *Lost* / *Needs attention* / *Drifted from the group* / *Health check*, from a day, for a number of days | add a row with a cow ID like `2-050`, the day it started and how long it lasts |
 | **Weather** | day: rain, temperature, wind | set a wind above 11 m/s and that day's flight is grounded, the count carries over, and the alert follows |
 
 **Records** are what the drone measured — the bulk of the file:
 
 | Sheet | One row per | Rows | Read back? |
 |---|---|---|---|
-| **Cow positions** | animal, on every flight: latitude, longitude, ground height, area, seen yes/no, confidence %, metres from the herd, kilometres walked, hours still, flags | 34,320 for a fortnight · 303,600 for a season | **yes** |
-| **Grassland** | area, on every day: green index, standing grass kg/ha, grass eaten %, rest days, cattle per hectare, grazed hours, health score | 1,440 | **yes** |
-| **Counts** | herd, on every counting flight: on the books, counted, missing, confidence, flagged | 456 | **yes** |
-| **Herd days** | herd, on every day: kilometres walked and hours grazing / chewing / resting / walking / drinking, ground used, spread, water visits | 480 | no |
-| **Flights** | mission: status, minutes, hectares flown, images, battery, wind, temperature, areas covered | 240 | no |
+| **Cow positions** | animal, on every flight: latitude, longitude, ground height, area, seen yes/no, confidence %, metres from the herd, kilometres walked, hours still, flags | ~36,000 for a fortnight; the whole season to date is a quarter of a million | **yes** |
+| **Grassland** | area, on every day: green index, standing grass kg/ha, grass eaten %, rest days, cattle per hectare, grazed hours, health score | 12 × days | **yes** |
+| **Counts** | herd, on every counting flight: on the books, counted, missing, confidence, flagged | 4 × days | **yes** |
+| **Herd days** | herd, on every day: kilometres walked and hours grazing / chewing / resting / walking / drinking, ground used, spread, water visits | 4 × days | no |
+| **Flights** | mission: status, minutes, hectares flown, images, battery, wind, temperature, areas covered | 2 × days | no |
 | **Area boundaries** | fence corner: latitude, longitude, height | 96 | no |
 
 Add or delete rows freely — herds, areas, flagged animals and every record are read from whatever
 rows are there. A sheet you leave alone keeps its current values, and a value that cannot work is
 refused with the sheet and row that caused it (*"Areas row 4: 'concrete' is not a grass type"*),
 leaving the current data untouched.
+
+### Who gets flagged, and for how long
+
+An incident has an end as well as a beginning. A cow that drifts off and stops moving is found on the
+next round; a lame animal is treated. Flagging the same two animals every day for a whole season is
+what a broken system looks like — so incidents open day by day from the three rates on the **Farm**
+sheet, each lasts a few days, and closes. Today's list is never yesterday's. The **Animals to watch**
+sheet is for naming a particular animal on a particular day on top of that; a *Lost* animal has no
+end, which is exactly what makes it lost.
 
 Where two sheets speak about the same thing, **the finer record wins**: per-animal rows settle the
 herd count, so the dashboard can never say a herd is complete while the map shows forty animals it
@@ -80,13 +93,14 @@ Worked examples, all measured on the standalone file:
 - mark 40 animals of Herd 2 *Seen = no* on the last flight → *cattle detected* 1,319 → 1,279, and the
   warning panel reads *"Herd 2 · 40 missing of 355"*
 - move one animal's latitude and longitude → that dot moves on the map, with its new GPS in its record
-- drop Area 3's green index to 0.05 → farm greenness 0.32 → 0.29 and another area reads *out of grass*
+- drop an area's green index to 0.05 → farm greenness falls with it, and that area reads *out of grass*
 - cut Herd 1 from 405 to 150 cattle → registered total 1,320 → 1,065 on every screen
 - set one day's wind to 14.2 m/s → *last drone flight* falls back to the day before
 
-**Size.** The animal record defaults to the **last 14 days** (34,320 rows, 2.5 MB). *Whole season* is
-303,600 rows and 21 MB: about 30 seconds to build and a minute to load back, and it is kept in
-IndexedDB rather than localStorage so there is no storage ceiling.
+**Size.** The animal record defaults to the **last 14 days** — about 36,000 rows and 2.6 MB. *Whole
+season to date* grows with the season: at its full 120 days it is 303,600 rows and 21 MB, roughly
+half a minute to build and a minute to load back. Records are kept in IndexedDB rather than
+localStorage, so there is no storage ceiling.
 
 **Under the bonnet** the settings live in [`farm.json`](farm.json) (working copy:
 `src/data/farm.json`) and the records are generated from them; a loaded workbook puts its settings
@@ -134,6 +148,13 @@ seven dots instead of thirteen hundred — and draws them larger, without changi
 framed.
 
 Then **what to do today** — the jobs, each with coordinates — and a detail card per herd.
+
+Jobs are **one errand per line**. Two findings that send someone on the same trip are one job: an
+animal down in the grass and one walking oddly in the same herd read as *"Check 3 cows in Herd 1 —
+Area 6"*, not as a red line and an amber line saying almost the same thing. Herds that came up one or
+two short this morning collapse into a single *"Recount 3 herds on tomorrow's flight"*, and strays
+from any number of herds into a single *"Bring 2 cows back to their herds"*. A duplicate line is a
+list that gets ignored.
 
 ### 2 · Alerts
 

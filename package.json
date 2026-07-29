@@ -9,7 +9,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "standalone": "npm run build && node scripts/standalone.mjs",
+    "standalone": "npm run build && npm run make-xlsx && node scripts/standalone.mjs",
     "make-farm": "esbuild scripts/make-farm.ts --bundle --format=esm --platform=node --outfile=node_modules/.cache/make-farm.mjs --log-level=warning && node node_modules/.cache/make-farm.mjs",
     "make-xlsx": "esbuild scripts/make-xlsx.ts --bundle --format=esm --platform=node --packages=external --outfile=node_modules/.cache/make-xlsx.mjs --log-level=warning && node node_modules/.cache/make-xlsx.mjs"
   },

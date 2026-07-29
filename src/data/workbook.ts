@@ -129,6 +129,10 @@ export async function farmFromWorkbook(file: File): Promise<Farm> {
   setNum('Wind that shortens the flight (m/s)', (n) => (farm.flights.shortenedAboveWindMs = n));
   setNum('Cattle the camera misses (share)', (n) => (farm.flights.baseMissRate = n));
   setNum('Map layout number', (n) => (farm.meta.layoutSeed = Math.round(n)));
+  setNum('Animals flagged per day — needs attention', (n) => (farm.animalEvents.perDay.needsAttention = n));
+  setNum('Animals flagged per day — drifted', (n) => (farm.animalEvents.perDay.separated = n));
+  setNum('Animals flagged per day — health check', (n) => (farm.animalEvents.perDay.welfare = n));
+  setNum('Flagging seed', (n) => (farm.animalEvents.seed = Math.round(n)));
   setText('Drone flight hours', (s) => {
     const hours = s
       .split(/[,;]/)
@@ -190,26 +194,33 @@ export async function farmFromWorkbook(file: File): Promise<Farm> {
   // ---- Animals to watch ---------------------------------------------------
   const animalSheet = get(SHEET.animals);
   if (animalSheet) {
-    const events: Farm['animalEvents'] = { lost: [], needsAttention: [], separated: [], welfare: [] };
+    const events: Farm['animalEvents'] = {
+      ...farm.animalEvents,
+      lost: [],
+      needsAttention: [],
+      separated: [],
+      welfare: [],
+    };
     const rows = body(animalSheet);
     for (const [i, r] of rows.entries()) {
       const line = i + 2;
       const kind = norm(text(r[0]));
       const cowId = text(r[1]);
       const fromDay = Math.max(0, Math.round(num(r[2]) ?? 0));
-      const awayM = num(r[3]) ?? 800;
-      const side = num(r[4]) ?? 0;
+      const days = Math.max(1, Math.round(num(r[3]) ?? 2));
+      const awayM = num(r[4]) ?? 800;
+      const side = num(r[5]) ?? 0;
       if (!/^\d+-\d+$/.test(cowId)) {
         throw new WorkbookError(`Animals row ${line}: "${cowId}" is not a cow ID — they read like 3-201`);
       }
       if (kind.startsWith('lost')) {
         events.lost.push({ cowId, herdId: `H${cowId.split('-')[0]}`, fromDay });
       } else if (kind.startsWith('needs')) {
-        events.needsAttention.push({ cowId, fromDay, awayM, side });
+        events.needsAttention.push({ cowId, fromDay, days, awayM, side });
       } else if (kind.startsWith('drifted') || kind.startsWith('separated')) {
-        events.separated.push({ cowId, fromDay, awayM, side });
+        events.separated.push({ cowId, fromDay, days, awayM, side });
       } else if (kind.startsWith('health') || kind.startsWith('welfare') || kind.startsWith('sick')) {
-        events.welfare.push({ cowId, fromDay });
+        events.welfare.push({ cowId, fromDay, days });
       } else {
         throw new WorkbookError(
           `Animals row ${line}: "${text(r[0])}" is not one of ${Object.values(ANIMAL_KINDS).join(', ')}`,

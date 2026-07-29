@@ -34,9 +34,17 @@ import type {
   Pt,
 } from './types';
 
-/** One warm-season grazing period, taken from the database (1 June – 28 September). */
-export const DAYS = SEASON_DAYS;
 export const START_DATE = new Date(`${FARM.season.startDate}T00:00:00Z`);
+
+/**
+ * The season runs from the start date in the database to today — never past it. A
+ * monitoring system is a log of what the drone has flown, not a forecast, so opening the
+ * app in late July shows a season that is two months old and still running, and the last
+ * flight is this morning's. `SEASON_DAYS` stays the planned length of the grazing period,
+ * because that is what the forage budget is divided by.
+ */
+const elapsed = Math.floor((Date.now() - START_DATE.getTime()) / 86_400_000) + 1;
+export const DAYS = Math.max(14, Math.min(SEASON_DAYS, elapsed));
 
 export const dateForDay = (day: number) => {
   const d = new Date(START_DATE.getTime() + day * 86_400_000);
@@ -105,9 +113,9 @@ const reachableTowards = (centroid: Pt, target: Pt, poly: Pt[]): Pt => {
 const WINDY_DAYS = new Set([12, 41, 63, 88, 109]);
 const GUSTY_DAYS = new Set([7, 29, 55, 74, 96, 113]);
 
-export function buildWeather(rng: Rng): DayWeather[] {
+export function buildWeather(rng: Rng, length = DAYS): DayWeather[] {
   const out: DayWeather[] = [];
-  for (let day = 0; day < DAYS; day++) {
+  for (let day = 0; day < length; day++) {
     // Xilingol gets ~70% of its rain in the July–August monsoon peak
     const monsoon = day >= 30 && day <= 82;
     const wetDay = rng.bool(monsoon ? 0.34 : 0.13);

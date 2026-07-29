@@ -6,7 +6,23 @@ import { writeRecordStore } from './store';
  * from the Data menu and is kept in this browser, so the whole interface — counts, map,
  * grass, alerts, history — is recomputed from whatever file is in force.
  */
-export type Farm = typeof defaultFarm & {
+/** An animal flagged from a day, for a number of days, and how far it strays. */
+type Incident = { cowId: string; fromDay: number; days: number; awayM: number; side: number };
+
+export type Farm = Omit<typeof defaultFarm, 'animalEvents'> & {
+  /**
+   * The lists ship empty — the rates generate the day-to-day stream — so their element
+   * types are spelled out here rather than inferred from an empty array in the JSON.
+   */
+  animalEvents: {
+    seed: number;
+    perDay: { needsAttention: number; separated: number; welfare: number };
+    lost: { cowId: string; herdId: string; fromDay: number }[];
+    needsAttention: Incident[];
+    separated: Incident[];
+    welfare: { cowId: string; fromDay: number; days: number }[];
+  };
+} & {
   /**
    * What the drone measured, when a workbook supplies it. These are observations, not
    * settings: where each animal was on each flight, what each herd counted, how green each

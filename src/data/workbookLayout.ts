@@ -37,6 +37,10 @@ const settingRows = (f: Farm) => [
   ['Wind that shortens the flight (m/s)', f.flights.shortenedAboveWindMs, 'Above this the round is cut short'],
   ['Cattle the camera misses (share)', f.flights.baseMissRate, '0.0012 means about 1 in 800'],
   ['Map layout number', f.meta.layoutSeed, 'Change it to redraw the fence lines'],
+  ['Animals flagged per day — needs attention', f.animalEvents.perDay.needsAttention, 'Chance a new one is found each day; each lasts 1–3 days'],
+  ['Animals flagged per day — drifted', f.animalEvents.perDay.separated, 'Each lasts 1–2 days'],
+  ['Animals flagged per day — health check', f.animalEvents.perDay.welfare, 'Each lasts 2–4 days'],
+  ['Flagging seed', f.animalEvents.seed, 'Change it to draw a different set of animals'],
 ];
 
 export const areaNumber = (id: string) => Number(id.replace(/\D/g, '')) || 0;
@@ -50,13 +54,14 @@ export const ANIMAL_KINDS = {
 
 function animalRows(f: Farm) {
   const rows: (string | number | null)[][] = [];
-  for (const a of f.animalEvents.lost) rows.push([ANIMAL_KINDS.lost, a.cowId, a.fromDay, null, null]);
+  // a lost animal has no end: that is what makes it lost
+  for (const a of f.animalEvents.lost) rows.push([ANIMAL_KINDS.lost, a.cowId, a.fromDay, null, null, null]);
   for (const a of f.animalEvents.needsAttention)
-    rows.push([ANIMAL_KINDS.needsAttention, a.cowId, a.fromDay, a.awayM, a.side]);
+    rows.push([ANIMAL_KINDS.needsAttention, a.cowId, a.fromDay, a.days, a.awayM, a.side]);
   for (const a of f.animalEvents.separated)
-    rows.push([ANIMAL_KINDS.separated, a.cowId, a.fromDay, a.awayM, a.side]);
+    rows.push([ANIMAL_KINDS.separated, a.cowId, a.fromDay, a.days, a.awayM, a.side]);
   for (const a of f.animalEvents.welfare)
-    rows.push([ANIMAL_KINDS.welfare, a.cowId, a.fromDay, null, null]);
+    rows.push([ANIMAL_KINDS.welfare, a.cowId, a.fromDay, a.days, null, null]);
   return rows;
 }
 
@@ -109,9 +114,9 @@ export function workbookSheets(f: Farm): Sheet[] {
 
   const animalsSheet: Sheet = {
     sheet: SHEET.animals,
-    columns: [{ width: 24 }, { width: 12 }, { width: 12 }, { width: 20 }, { width: 20 }],
+    columns: [{ width: 24 }, { width: 12 }, { width: 11 }, { width: 9 }, { width: 20 }, { width: 20 }],
     data: [
-      header('What', 'Cow ID', 'From day', 'Metres from the herd', 'Metres sideways'),
+      header('What', 'Cow ID', 'From day', 'Days', 'Metres from the herd', 'Metres sideways'),
       ...animalRows(f).map((r) =>
         r.map((value, i) =>
           value === null ? null : i === 0 || i === 1 ? { value: String(value) } : { value: Number(value), type: Number },
@@ -119,7 +124,7 @@ export function workbookSheets(f: Farm): Sheet[] {
       ),
       [],
       [{ value: 'What: Lost · Needs attention · Drifted from the group · Health check. Cow ID reads "herd-number", e.g. 3-201.', ...NOTE }],
-      [{ value: 'The last two columns place the animal on the map and only apply to the middle two kinds.', ...NOTE }],
+      [{ value: 'Days is how long it lasts — leave it blank for an animal that stays lost. Most flagged animals come and go on their own from the rates on the Farm sheet.', ...NOTE }],
     ],
   };
 

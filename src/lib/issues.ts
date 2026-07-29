@@ -42,218 +42,263 @@ export function buildIssues(data: Dataset, day: number, cows: CowState[]): Issue
   const flightsToday = data.flights.filter((f) => f.day === day);
   const flightFinished = flightsToday.some((f) => f.detections.length > 0 && f.status === 'complete');
 
-  /* 1 — animals that are away from the herd and barely moving */
+  /*
+   * 1 — animals to go and look at.
+   *
+   * Two different findings send a stockman on exactly the same errand: an animal away
+   * from the herd and not moving, and one the imagery flagged for how it walks. Splitting
+   * them produced two jobs a line apart that read "Check 2 cows in Herd 1 — Area 1" and
+   * "Check 1 cow in Herd 1 — Area 1", which is nonsense on a to-do list. They are one
+   * job: ride out and look these animals over. The card still explains both findings.
+   */
   for (const herd of data.herds) {
-    const urgent = cows.filter(
-      (c) => c.cow.herdId === herd.id && c.flags.includes('isolated') && c.flags.includes('stationary'),
-    );
-    if (!urgent.length) continue;
-    const worst = urgent[0];
+    const inHerd = cows.filter((c) => c.cow.herdId === herd.id);
+    const down = inHerd.filter((c) => c.flags.includes('isolated') && c.flags.includes('stationary'));
+    const lame = inHerd.filter((c) => c.flags.includes('sick') && !down.includes(c));
+    const check = [...down, ...lame];
+    if (!check.length) continue;
+
+    const worst = check[0];
+    const area = areaOf(worst);
+    const n = check.length;
+    const list = (cs: typeof check, sep = ' and ') => cs.map((c) => c.cow.id).join(sep);
+    const meanAway = down.length
+      ? Math.round(down.reduce((a, c) => a + c.fromHerdM, 0) / down.length)
+      : 0;
+    const meanStill = down.length
+      ? Math.round(down.reduce((a, c) => a + c.stillHours, 0) / down.length)
+      : 0;
+
+    const downSaw = {
+      en: `${list(down)} ${down.length === 1 ? 'is' : 'are'} ${meanAway} m from the rest of the herd and ${down.length === 1 ? 'has' : 'have'} barely moved for ${meanStill} hours.`,
+      zh: `${list(down, '、')} 距离牛群约 ${meanAway} 米，且已静止约 ${meanStill} 小时。`,
+    };
+    const lameSaw = {
+      en: `The imagery flagged ${list(lame, ', ')} for an unusual gait or lying pattern.`,
+      zh: `影像识别标记了 ${list(lame, '、')}，其步态或卧地姿态异常。`,
+    };
+
     out.push({
       id: `attention-${herd.id}`,
       kind: 'attention',
-      severity: 'critical',
+      // an animal down and still is today's job; a limp can wait for the next muster
+      severity: down.length ? 'critical' : 'serious',
       herdId: herd.id,
-      cowIds: urgent.map((c) => c.cow.id),
+      cowIds: check.map((c) => c.cow.id),
       gps: gpsOf(worst.at),
       title: {
         en:
-          urgent.length === 1
-            ? `1 animal in ${herd.name.en} needs checking now`
-            : `${urgent.length} animals in ${herd.name.en} need checking now`,
-        zh: `${herd.name.zh} 有 ${urgent.length} 头牛需立即查看`,
+          n === 1
+            ? `1 animal in ${herd.name.en} needs checking`
+            : `${n} animals in ${herd.name.en} need checking`,
+        zh: `${herd.name.zh} 有 ${n} 头牛需查看`,
       },
       what: {
-        en: `${urgent.map((c) => c.cow.id).join(' and ')} are ${Math.round(
-          urgent.reduce((a, c) => a + c.fromHerdM, 0) / urgent.length,
-        )} m from the rest of the herd and have barely moved for ${Math.round(
-          urgent.reduce((a, c) => a + c.stillHours, 0) / urgent.length,
-        )} hours.`,
-        zh: `${urgent.map((c) => c.cow.id).join('、')} 距离牛群约 ${Math.round(
-          urgent.reduce((a, c) => a + c.fromHerdM, 0) / urgent.length,
-        )} 米，且已静止约 ${Math.round(
-          urgent.reduce((a, c) => a + c.stillHours, 0) / urgent.length,
-        )} 小时。`,
+        en: [down.length ? downSaw.en : '', lame.length ? lameSaw.en : ''].filter(Boolean).join(' '),
+        zh: [down.length ? downSaw.zh : '', lame.length ? lameSaw.zh : ''].filter(Boolean).join(''),
       },
-      why: {
-        en: 'Healthy cattle stay with the group and keep grazing. Leaving the herd and lying still is the first sign of injury, calving trouble or illness — and a lone animal is the one wolves take.',
-        zh: '健康的牛会跟群并持续采食。离群且长时间卧地，往往是外伤、难产或疾病的最早信号，落单的牛也最易遭狼害。',
-      },
+      why: down.length
+        ? {
+            en: 'Healthy cattle stay with the group and keep grazing. Leaving the herd and lying still is the first sign of injury, calving trouble or illness — and a lone animal is the one wolves take.',
+            zh: '健康的牛会跟群并持续采食。离群且长时间卧地，往往是外伤、难产或疾病的最早信号，落单的牛也最易遭狼害。',
+          }
+        : {
+            en: 'Lameness and early illness show up in how an animal walks days before it stops eating. Caught now, most cases are a simple treatment.',
+            zh: '跛行与早期疾病会在停食前数日先反映在步态上。及早发现，多数只需简单处置。',
+          },
       task: {
-        en: `Check ${urgent.length} ${urgent.length === 1 ? 'cow' : 'cows'} in ${herd.name.en}${
-          areaOf(worst) ? ` — ${areaOf(worst)!.name.en}` : ''
-        }`,
-        zh: `查看${herd.name.zh}的 ${urgent.length} 头牛${
-          areaOf(worst) ? `（${areaOf(worst)!.name.zh}）` : ''
-        }`,
+        en: `Check ${n} ${n === 1 ? 'cow' : 'cows'} in ${herd.name.en}${area ? ` — ${area.name.en}` : ''}`,
+        zh: `查看${herd.name.zh}的 ${n} 头牛${area ? `（${area.name.zh}）` : ''}`,
       },
-      action: {
-        en: 'Ride out to the coordinates below today and look the animals over. Bring them back to the herd or down to the camp if they cannot walk well.',
-        zh: '今日按下方坐标前往查看。若行走困难，请将其带回牛群或牧点。',
-      },
+      action: down.length
+        ? {
+            en: `Ride out to the coordinates below today and look the animals over${lame.length ? `, including ${list(lame, ', ')} for lameness` : ''}. Bring them back to the herd or down to the camp if they cannot walk well.`,
+            zh: `今日按下方坐标前往查看${lame.length ? `，并留意 ${list(lame, '、')} 是否跛行` : ''}。若行走困难，请将其带回牛群或牧点。`,
+          }
+        : {
+            en: 'Look these animals over at the next muster; check their feet and udder.',
+            zh: '下次集群时逐头检查，重点查蹄部与乳房。',
+          },
     });
   }
 
-  /* 2 — animals the drone could not find */
+  /*
+   * 2 — animals the drone could not find.
+   *
+   * An animal missing for days is a search, and it gets a job of its own per herd. A herd
+   * that came up one or two short this morning is not: that is ordinary occlusion, and
+   * three separate amber lines saying "recount Herd 1", "recount Herd 2", "recount Herd 4"
+   * is three ways of writing the same instruction. They become one.
+   */
+  const shortToday: { herd: (typeof data.herds)[number]; missing: CowState[] }[] = [];
+
   for (const herd of data.herds) {
     const missing = cows.filter((c) => c.cow.herdId === herd.id && c.surveyed && !c.detected);
     if (!missing.length) continue;
     const longGone = missing.filter((c) => c.lastSeenDaysAgo >= 3);
-    const severity: Severity = longGone.length ? 'critical' : flightFinished ? 'serious' : 'warning';
+    if (!longGone.length) {
+      shortToday.push({ herd, missing });
+      continue;
+    }
+    const area = areaOf(missing[0]);
+    const days = Math.max(...longGone.map((c) => c.lastSeenDaysAgo));
+    const ids = longGone.map((c) => c.cow.id);
     out.push({
       id: `missing-${herd.id}`,
       kind: 'missing',
-      severity,
+      severity: 'critical',
       herdId: herd.id,
-      cowIds: missing.map((c) => c.cow.id),
-      gps: gpsOf(missing[0].at),
+      cowIds: ids,
+      gps: gpsOf(longGone[0].at),
       title: {
-        en: `${missing.length} cattle missing from ${herd.name.en}`,
-        zh: `${herd.name.zh} 缺 ${missing.length} 头牛`,
+        en: `${ids.length} missing from ${herd.name.en}`,
+        zh: `${herd.name.zh} 走失 ${ids.length} 头`,
       },
-      what: flightFinished
-        ? {
-            en: `The drone counted ${herd.head - missing.length} of ${herd.head}. ${
-              longGone.length
-                ? `${longGone.length} of them (${longGone.map((c) => c.cow.id).join(', ')}) ${
-                    longGone.length === 1 ? 'has' : 'have'
-                  } not been seen for ${Math.max(...longGone.map((c) => c.lastSeenDaysAgo))} days.`
-                : 'All of them were seen on an earlier flight this week.'
-            }`,
-            zh: `无人机清点 ${herd.head - missing.length}/${herd.head} 头。${
-              longGone.length
-                ? `其中 ${longGone.length} 头（${longGone.map((c) => c.cow.id).join('、')}）已 ${Math.max(
-                    ...longGone.map((c) => c.lastSeenDaysAgo),
-                  )} 天未见。`
-                : '其余本周早些时候均被拍到。'
-            }`,
-          }
-        : {
-            en: `The flight was cut short by wind, so this count is incomplete: ${
-              herd.head - missing.length
-            } of ${herd.head} were in frame.`,
-            zh: `本次航拍因大风缩短，清点不完整：${herd.head - missing.length}/${herd.head} 头在画面内。`,
-          },
-      why: longGone.length
-        ? {
-            en: 'An animal absent from several flights in a row is not hiding under a tree — it has strayed through a fence line, is down in a gully, or has been taken.',
-            zh: '连续多次航拍均未出现，通常不是被遮挡，而是已越界走失、跌落沟谷或被捕食。',
-          }
-        : {
-            en: 'One missed count is usually an animal in shadow or under cover. It matters only if the same animal is missing again tomorrow.',
-            zh: '单次未识别多为遮挡所致。若次日同一头牛仍未出现，才需重视。',
-          },
-      task: longGone.length
-        ? {
-            en: `Find ${longGone.length} missing ${longGone.length === 1 ? 'cow' : 'cows'} in ${herd.name.en}${
-              areaOf(missing[0]) ? ` — ${areaOf(missing[0])!.name.en}` : ''
-            }`,
-            zh: `寻找${herd.name.zh}走失的 ${longGone.length} 头牛${
-              areaOf(missing[0]) ? `（${areaOf(missing[0])!.name.zh}）` : ''
-            }`,
-          }
-        : {
-            en: `Recount ${herd.name.en} on tomorrow's flight`,
-            zh: `次日航拍时复点${herd.name.zh}`,
-          },
-      action: longGone.length
-        ? {
-            en: `Search the gullies and the fence line near the coordinates below for ${longGone
-              .map((c) => c.cow.id)
-              .join(', ')}.`,
-            zh: `请在下方坐标附近的沟谷与围栏一带寻找 ${longGone.map((c) => c.cow.id).join('、')}。`,
-          }
-        : {
-            en: `Check the tomorrow morning count for ${herd.name.en}. If the same animals are missing again, ride the fence line near the coordinates below.`,
-            zh: `请核对${herd.name.zh}次日清晨的清点结果。若同一批牛仍未出现，请沿下方坐标附近的围栏巡查。`,
-          },
+      what: {
+        en: `The drone counted ${herd.head - missing.length} of ${herd.head}. ${ids.join(', ')} ${
+          ids.length === 1 ? 'has' : 'have'
+        } not been seen for ${days} days.`,
+        zh: `无人机清点 ${herd.head - missing.length}/${herd.head} 头。${ids.join('、')} 已 ${days} 天未见。`,
+      },
+      why: {
+        en: 'An animal absent from several flights in a row is not hiding under a tree — it has strayed through a fence line, is down in a gully, or has been taken.',
+        zh: '连续多次航拍均未出现，通常不是被遮挡，而是已越界走失、跌落沟谷或被捕食。',
+      },
+      task: {
+        en: `Find ${ids.length} missing ${ids.length === 1 ? 'cow' : 'cows'} in ${herd.name.en}${
+          area ? ` — ${area.name.en}` : ''
+        }`,
+        zh: `寻找${herd.name.zh}走失的 ${ids.length} 头牛${area ? `（${area.name.zh}）` : ''}`,
+      },
+      action: {
+        en: `Search the gullies and the fence line near the coordinates below for ${ids.join(', ')}.`,
+        zh: `请在下方坐标附近的沟谷与围栏一带寻找 ${ids.join('、')}。`,
+      },
     });
   }
 
-  /* 2b — animals that have drifted off the mob but are grazing normally */
-  for (const herd of data.herds) {
-    const drifted = cows.filter((c) => c.cow.herdId === herd.id && c.flags.includes('separated'));
-    if (!drifted.length) continue;
+  if (shortToday.length) {
+    const names = shortToday.map((s) => s.herd.name.en).join(', ');
+    const namesZh = shortToday.map((s) => s.herd.name.zh).join('、');
+    const total = shortToday.reduce((a, s) => a + s.missing.length, 0);
+    out.push({
+      id: 'recount',
+      kind: 'missing',
+      severity: flightFinished ? 'warning' : 'serious',
+      herdId: shortToday.length === 1 ? shortToday[0].herd.id : undefined,
+      cowIds: shortToday.flatMap((s) => s.missing.map((c) => c.cow.id)),
+      gps: gpsOf(shortToday[0].missing[0].at),
+      title: {
+        en:
+          shortToday.length === 1
+            ? `${total} not in frame in ${shortToday[0].herd.name.en}`
+            : `${total} not in frame across ${shortToday.length} herds`,
+        zh:
+          shortToday.length === 1
+            ? `${shortToday[0].herd.name.zh} 有 ${total} 头未入画`
+            : `${shortToday.length} 个牛群共 ${total} 头未入画`,
+      },
+      what: flightFinished
+        ? {
+            en: `${names} each came up short by one or two this morning: ${shortToday
+              .map((s) => `${s.herd.name.en} ${s.herd.head - s.missing.length}/${s.herd.head}`)
+              .join(', ')}. All of the animals were seen on an earlier flight this week.`,
+            zh: `今晨 ${namesZh} 各短少一两头：${shortToday
+              .map((s) => `${s.herd.name.zh} ${s.herd.head - s.missing.length}/${s.herd.head}`)
+              .join('、')}。相关牛只本周早些时候均被拍到。`,
+          }
+        : {
+            en: `The flight was cut short by wind, so this morning's count is incomplete: ${names} were only partly in frame.`,
+            zh: `本次航拍因大风缩短，今晨清点不完整：${namesZh} 仅部分入画。`,
+          },
+      why: {
+        en: 'One missed count is usually an animal in shadow or under cover. It matters only if the same animal is missing again tomorrow.',
+        zh: '单次未识别多为遮挡所致。若次日同一头牛仍未出现，才需重视。',
+      },
+      task: {
+        en:
+          shortToday.length === 1
+            ? `Recount ${shortToday[0].herd.name.en} on tomorrow's flight`
+            : `Recount ${shortToday.length} herds on tomorrow's flight`,
+        zh:
+          shortToday.length === 1
+            ? `次日航拍时复点${shortToday[0].herd.name.zh}`
+            : `次日航拍时复点 ${shortToday.length} 个牛群`,
+      },
+      action: {
+        en: `Check tomorrow morning's count for ${names}. If the same animals are missing again, ride the fence line near the coordinates below.`,
+        zh: `请核对 ${namesZh} 次日清晨的清点结果。若同一批牛仍未出现，请沿下方坐标附近的围栏巡查。`,
+      },
+    });
+  }
+
+  /*
+   * 3 — animals that have drifted off the mob but are grazing normally.
+   *
+   * Pushing strays back is one round, not one round per herd, so however many herds have
+   * lost a couple this is a single line on the list. The card names each animal and where.
+   */
+  const drifted = cows.filter((c) => c.flags.includes('separated'));
+  if (drifted.length) {
+    const byHerd = data.herds
+      .map((herd) => ({ herd, cs: drifted.filter((c) => c.cow.herdId === herd.id) }))
+      .filter((g) => g.cs.length);
+    const where = byHerd
+      .map((g) => {
+        const area = areaOf(g.cs[0]);
+        return `${g.cs.map((c) => c.cow.id).join(', ')} from ${g.herd.name.en}${area ? ` in ${area.name.en}` : ''}`;
+      })
+      .join('; ');
+    const whereZh = byHerd
+      .map((g) => {
+        const area = areaOf(g.cs[0]);
+        return `${g.herd.name.zh}的 ${g.cs.map((c) => c.cow.id).join('、')}${area ? `（${area.name.zh}）` : ''}`;
+      })
+      .join('；');
+    const n = drifted.length;
     const area = areaOf(drifted[0]);
     out.push({
-      id: `separated-${herd.id}`,
+      id: 'separated',
       kind: 'separated',
       severity: 'warning',
-      herdId: herd.id,
+      herdId: byHerd.length === 1 ? byHerd[0].herd.id : undefined,
       cowIds: drifted.map((c) => c.cow.id),
       gps: gpsOf(drifted[0].at),
       title: {
-        en: `${drifted.length} cattle have drifted from ${herd.name.en}`,
-        zh: `${herd.name.zh} 有 ${drifted.length} 头牛暂时离群`,
+        en: n === 1 ? '1 animal has drifted from its herd' : `${n} animals have drifted from their herds`,
+        zh: `${n} 头牛暂时离群`,
       },
       what: {
-        en: `${drifted.map((c) => c.cow.id).join(' and ')} are ${Math.round(
-          drifted.reduce((a, c) => a + c.fromHerdM, 0) / drifted.length,
-        )} m from the mob${area ? ` in ${area.name.en}` : ''}, but still grazing and moving normally.`,
-        zh: `${drifted.map((c) => c.cow.id).join('、')} 距牛群约 ${Math.round(
-          drifted.reduce((a, c) => a + c.fromHerdM, 0) / drifted.length,
-        )} 米${area ? `（${area.name.zh}）` : ''}，但采食与活动均正常。`,
+        en: `${where} — ${
+          n === 1 ? 'it is' : 'they are'
+        } ${Math.round(drifted.reduce((a, c) => a + c.fromHerdM, 0) / n)} m from the mob, but still grazing and moving normally.`,
+        zh: `${whereZh} —— 距牛群约 ${Math.round(
+          drifted.reduce((a, c) => a + c.fromHerdM, 0) / n,
+        )} 米，但采食与活动均正常。`,
       },
       why: {
         en: 'Animals split off for good reasons — better feed, shade, a calf. It only becomes a problem if they stay out overnight, when they are easy prey and easy to miss at the next count.',
         zh: '牛只离群多因觅食、遮阴或带犊，属正常现象。但若过夜仍未归群，则易遭捕食，也易在下次清点时被遗漏。',
       },
+      task:
+        byHerd.length === 1
+          ? {
+              en: `Bring ${n} ${n === 1 ? 'cow' : 'cows'} back to ${byHerd[0].herd.name.en}${
+                area ? ` — ${area.name.en}` : ''
+              }`,
+              zh: `将 ${n} 头牛赶回${byHerd[0].herd.name.zh}${area ? `（${area.name.zh}）` : ''}`,
+            }
+          : {
+              en: `Bring ${n} cows back to their herds — ${byHerd
+                .map((g) => areaOf(g.cs[0])?.name.en ?? g.herd.name.en)
+                .join(', ')}`,
+              zh: `将 ${n} 头牛赶回各自牛群（${byHerd
+                .map((g) => areaOf(g.cs[0])?.name.zh ?? g.herd.name.zh)
+                .join('、')}）`,
+            },
       action: {
         en: 'Push them back to the mob on your next round. No hurry unless they are still out tomorrow.',
         zh: '下次巡场时将其赶回牛群。若次日仍未归群再行处理。',
-      },
-      task: {
-        en: `Bring ${drifted.length} ${drifted.length === 1 ? 'cow' : 'cows'} back to ${herd.name.en}${
-          area ? ` — ${area.name.en}` : ''
-        }`,
-        zh: `将 ${drifted.length} 头牛赶回${herd.name.zh}${area ? `（${area.name.zh}）` : ''}`,
-      },
-    });
-  }
-
-  /* 3 — animals the model flagged for how they move */
-  for (const herd of data.herds) {
-    const sick = cows.filter((c) => c.cow.herdId === herd.id && c.flags.includes('sick'));
-    if (!sick.length) continue;
-    const area = areaOf(sick[0]);
-    out.push({
-      id: `sick-${herd.id}`,
-      kind: 'sick',
-      severity: 'serious',
-      herdId: herd.id,
-      cowIds: sick.map((c) => c.cow.id),
-      gps: gpsOf(sick[0].at),
-      title: {
-        en:
-          sick.length === 1
-            ? `1 animal in ${herd.name.en} is moving abnormally`
-            : `${sick.length} animals in ${herd.name.en} are moving abnormally`,
-        zh: `${herd.name.zh} 有 ${sick.length} 头牛动作异常`,
-      },
-      what: {
-        en: `The imagery flagged ${sick.map((c) => c.cow.id).join(', ')}${
-          area ? ` in ${area.name.en}` : ''
-        } for an unusual gait or lying pattern.`,
-        zh: `影像识别标记了${area ? `${area.name.zh}的` : ''} ${sick
-          .map((c) => c.cow.id)
-          .join('、')}，其步态或卧地姿态异常。`,
-      },
-      why: {
-        en: 'Lameness and early illness show up in how an animal walks days before it stops eating. Caught now, most cases are a simple treatment.',
-        zh: '跛行与早期疾病会在停食前数日先反映在步态上。及早发现，多数只需简单处置。',
-      },
-      action: {
-        en:
-          sick.length === 1
-            ? 'Look this animal over at the next muster; check its feet and udder.'
-            : 'Look these animals over at the next muster; check feet and udder.',
-        zh: '下次集群时逐头检查，重点查蹄部与乳房。',
-      },
-      task: {
-        en: `Check ${sick.length} ${sick.length === 1 ? 'cow' : 'cows'} in ${herd.name.en}${
-          area ? ` — ${area.name.en}` : ''
-        }`,
-        zh: `查看${herd.name.zh}的 ${sick.length} 头牛${area ? `（${area.name.zh}）` : ''}`,
       },
     });
   }
@@ -324,7 +369,29 @@ export function buildIssues(data: Dataset, day: number, cows: CowState[]): Issue
     });
   }
 
-  return out.sort((a, b) => RANK[a.severity] - RANK[b.severity]);
+  return dedupe(out.sort((a, b) => RANK[a.severity] - RANK[b.severity]));
+}
+
+/**
+ * Backstop against two jobs that read the same. Whatever the findings behind them, a list
+ * that tells someone twice to check cows in the same herd and the same area is a list
+ * that will be ignored — so the first (most severe) one keeps the line, and the rest fold
+ * their animals into it.
+ */
+function dedupe(issues: Issue[]): Issue[] {
+  const seen = new Map<string, Issue>();
+  const out: Issue[] = [];
+  for (const issue of issues) {
+    const key = issue.task.en;
+    const first = seen.get(key);
+    if (!first) {
+      seen.set(key, issue);
+      out.push(issue);
+      continue;
+    }
+    first.cowIds = [...new Set([...(first.cowIds ?? []), ...(issue.cowIds ?? [])])];
+  }
+  return out;
 }
 
 export const issueSeverityOf = (cows: CowState[]) =>

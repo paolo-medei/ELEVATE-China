@@ -1,7 +1,7 @@
 import { makeRng } from '../lib/rng';
 import { dist, fromLatLon, pointInPolygon } from '../lib/geo';
 import { cowRecord, cowTallyForDay } from './records';
-import { elevationAt, herds, LOST_ANIMALS, paddockById, RANCH_H, RANCH_W } from './ranch';
+import { elevationAt, herds, LOST_ANIMALS, paddockById, RANCH_H, RANCH_W, SEASON_DAYS } from './ranch';
 import { FARM } from './source';
 import type { Dataset, Pt } from './types';
 
@@ -58,12 +58,93 @@ const hash = (herdId: string, day: number) => herdId.charCodeAt(1) * 7919 + day 
  */
 const LOST = LOST_ANIMALS;
 
+/**
+ * An incident has an end as well as a beginning.
+ *
+ * A cow that drifts off and stops moving is found on the next round; a lame animal is
+ * treated and walks normally again. Flagging the same two animals every single day for a
+ * whole season is what a broken system looks like, not a working one — so every incident
+ * runs for a few days and then closes, and new ones open behind it.
+ */
+export type Incident = {
+  cowId: string;
+  fromDay: number;
+  /** how many days it lasts, counting the first */
+  days: number;
+  awayM: number;
+  side: number;
+};
+
+const rates = FARM.animalEvents.perDay;
+
+/**
+ * The background stream of incidents: who is flagged, on which days, drawn once for the
+ * whole season from a fixed seed so the same day always tells the same story. Rates come
+ * from the database, so a farm with more trouble is one number away.
+ */
+function rollIncidents() {
+  const rng = makeRng(FARM.animalEvents.seed);
+  const attention: Incident[] = [];
+  const separated: Incident[] = [];
+  const welfare: Incident[] = [];
+  const busy = new Set<string>();
+
+  const open = (
+    into: Incident[],
+    day: number,
+    minDays: number,
+    maxDays: number,
+    away: [number, number],
+  ) => {
+    // never flag an animal that is already flagged, or genuinely lost
+    for (let tries = 0; tries < 8; tries++) {
+      const cow = cows[rng.int(0, cows.length - 1)];
+      if (busy.has(cow.id) || LOST.some((l) => l.cowId === cow.id)) continue;
+      const days = rng.int(minDays, maxDays);
+      busy.add(cow.id);
+      into.push({
+        cowId: cow.id,
+        fromDay: day,
+        days,
+        awayM: Math.round(rng.range(away[0], away[1])),
+        side: Math.round(rng.gauss(0, 260)),
+      });
+      return;
+    }
+  };
+
+  for (let day = 0; day < SEASON_DAYS; day++) {
+    // an animal flagged a few days ago is available again
+    for (const list of [attention, separated, welfare]) {
+      for (const e of list) if (day === e.fromDay + e.days) busy.delete(e.cowId);
+    }
+    if (rng.next() < rates.needsAttention) open(attention, day, 1, 3, [900, 1400]);
+    if (rng.next() < rates.separated) open(separated, day, 1, 2, [600, 900]);
+    if (rng.next() < rates.welfare) open(welfare, day, 2, 4, [0, 0]);
+  }
+  return { attention, separated, welfare };
+}
+
+const rolled = rollIncidents();
+
+/** whether an incident covers a given day */
+const on = (e: { fromDay: number; days?: number }, day: number) =>
+  day >= e.fromDay && day < e.fromDay + (e.days ?? Infinity);
+
+/** Hand-written incidents from the database come first, then the rolled ones. */
+const scripted = FARM.animalEvents;
+
 /** Animals that have drifted off the mob but are still walking and grazing normally. */
-export const SEPARATED: { cowId: string; fromDay: number; awayM: number; side: number }[] =
-  FARM.animalEvents.separated;
+export const SEPARATED: Incident[] = [
+  ...(scripted.separated as Incident[]),
+  ...rolled.separated,
+];
 
 /** Animals the imagery flagged for how they move. */
-export const WELFARE: { cowId: string; fromDay: number }[] = FARM.animalEvents.welfare;
+export const WELFARE: { cowId: string; fromDay: number; days?: number }[] = [
+  ...scripted.welfare,
+  ...rolled.welfare,
+];
 
 /**
  * Which animals the drone failed to pick out, derived from the herd count the mission
@@ -130,7 +211,7 @@ export function cowSnapshot(data: Dataset, day: number, hour: number): CowState[
 
     const roster = cowsByHerd.get(herd.id)!;
     const flagged = new Set(
-      WELFARE.filter((wf) => day >= wf.fromDay && roster.some((c) => c.id === wf.cowId)).map(
+      WELFARE.filter((wf) => on(wf, day) && roster.some((c) => c.id === wf.cowId)).map(
         (wf) => wf.cowId,
       ),
     );
@@ -157,8 +238,8 @@ export function cowSnapshot(data: Dataset, day: number, hour: number): CowState[
         }
       }
 
-      const attention = ATTENTION.find((a) => a.cowId === cow.id && day >= a.fromDay);
-      const separated = SEPARATED.find((a) => a.cowId === cow.id && day >= a.fromDay);
+      const attention = ATTENTION.find((a) => a.cowId === cow.id && on(a, day));
+      const separated = SEPARATED.find((a) => a.cowId === cow.id && on(a, day));
       const drift = attention ?? separated;
       if (drift) {
         // drift toward the middle of the plateau so the animal is always on the map
@@ -297,5 +378,7 @@ export function attentionByDay(data: Dataset): DayAttention[] {
   return attentionCache;
 }
 
-export const ATTENTION: { cowId: string; fromDay: number; awayM: number; side: number }[] =
-  FARM.animalEvents.needsAttention;
+export const ATTENTION: Incident[] = [
+  ...(FARM.animalEvents.needsAttention as Incident[]),
+  ...rolled.attention,
+];
