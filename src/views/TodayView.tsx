@@ -215,9 +215,14 @@ export function TodayView({
             </small>
           </span>
           <span className="fact-note">
-            {t('factAreasOut', {
-              n: areasToday.filter((pd) => paddockState(pd) === 'outOfGrass').length,
-            })}
+            {(() => {
+              const spent = areasToday.filter((pd) => paddockState(pd) === 'outOfGrass').length;
+              return spent === 0
+                ? t('factAreasFine')
+                : spent === 1
+                  ? t('factAreaOut')
+                  : t('factAreasOut', { n: spent });
+            })()}
           </span>
         </div>
       </div>

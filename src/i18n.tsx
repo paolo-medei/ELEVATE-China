@@ -192,7 +192,9 @@ const DICT = {
   factGreenGood: { en: 'good', zh: '良好' },
   factGreenFair: { en: 'fair', zh: '一般' },
   factGreenPoor: { en: 'poor', zh: '较差' },
-  factAreasOut: { en: '{n} areas out of grass', zh: '{n} 个草场牧草用尽' },
+  factAreasOut: { en: '{n} areas grazed too hard', zh: '{n} 个草场放牧过度' },
+  factAreaOut: { en: '1 area grazed too hard', zh: '1 个草场放牧过度' },
+  factAreasFine: { en: 'every area within its limit', zh: '各草场均在限值内' },
   herdStatus: { en: 'Herd status', zh: '牛群状态' },
 
   // the one screen
@@ -249,9 +251,9 @@ const DICT = {
   grassAllFine: { en: 'The other {n} areas have plenty of grass or are resting.', zh: '其余 {n} 个草场牧草充足或正在休牧。' },
   grassLeft: { en: 'Grass left', zh: '牧草余量' },
   grassUsed: { en: 'Grass eaten this season', zh: '本季已采食' },
-  state_outOfGrass: { en: 'Out of grass', zh: '牧草用尽' },
-  state_watch: { en: 'Nearly used up', zh: '接近用尽' },
-  state_ok: { en: 'Plenty of grass', zh: '牧草充足' },
+  state_outOfGrass: { en: 'Grazed too hard', zh: '放牧过度' },
+  state_watch: { en: 'Grazed hard', zh: '放牧偏重' },
+  state_ok: { en: 'Grass is fine', zh: '牧草良好' },
   state_resting: { en: 'Resting', zh: '休牧中' },
   restingFor: { en: 'resting · {n} d', zh: '休牧 {n} 天' },
   grazingNow: { en: 'grazing here now', zh: '当前放牧' },

@@ -335,16 +335,16 @@ export function buildIssues(data: Dataset, day: number, cows: CowState[]): Issue
       herdId: herd?.id,
       gps: gpsOf(area.centroid),
       title: {
-        en: `${area.name.en} has run out of grass`,
-        zh: `${area.name.zh} 牧草已用尽`,
+        en: `${area.name.en} has been grazed past its limit`,
+        zh: `${area.name.zh} 放牧已超出限值`,
       },
       what: {
         en: `${Math.round(pd.utilization * 100)}% of the grass this area can spare in a season has been eaten, and ${pd.biomass} kg/ha is left standing.`,
         zh: `该草场本季可采食牧草已用去 ${Math.round(pd.utilization * 100)}%，现存 ${pd.biomass} kg/ha。`,
       },
       why: {
-        en: 'Grazed past this point the plants cannot rebuild their roots before winter, and the area comes back thinner every year.',
-        zh: '超过此界限后，牧草入冬前无法恢复根系，草场逐年退化。',
+        en: 'The sward still looks green — that is the trap. Taking more than this off in a season leaves the plants without enough left to rebuild their roots before winter, and the area comes back thinner every year.',
+        zh: '草面看起来仍然翠绿，这正是隐患所在。牧季内采食超过此限，牧草入冬前无法恢复根系，草场将逐年退化。',
       },
       task: herd
         ? { en: `Move ${herd.name.en} off ${area.name.en}`, zh: `将${herd.name.zh}转出${area.name.zh}` }

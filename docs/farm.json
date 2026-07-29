@@ -97,7 +97,7 @@
         "en": "Area 6",
         "zh": "6 号草场"
       },
-      "pasture": "typical"
+      "pasture": "sandy"
     },
     {
       "id": "P7",
@@ -113,7 +113,7 @@
         "en": "Area 8",
         "zh": "8 号草场"
       },
-      "pasture": "meadow"
+      "pasture": "sandy"
     },
     {
       "id": "P9",
@@ -158,11 +158,12 @@
       "head": 405,
       "animalUnitsPerHead": 1,
       "rotation": [
+        "P5",
         "P1",
         "P5",
         "P9"
       ],
-      "daysPerArea": 13,
+      "daysPerArea": 8,
       "rotationOffset": 0
     },
     {
@@ -174,12 +175,13 @@
       "head": 355,
       "animalUnitsPerHead": 1,
       "rotation": [
+        "P6",
         "P2",
         "P6",
         "P10"
       ],
-      "daysPerArea": 12,
-      "rotationOffset": 4
+      "daysPerArea": 9,
+      "rotationOffset": 0
     },
     {
       "id": "H3",
@@ -195,7 +197,7 @@
         "P11"
       ],
       "daysPerArea": 14,
-      "rotationOffset": 7
+      "rotationOffset": 0
     },
     {
       "id": "H4",
@@ -206,12 +208,13 @@
       "head": 260,
       "animalUnitsPerHead": 1.15,
       "rotation": [
+        "P8",
         "P4",
         "P8",
         "P12"
       ],
-      "daysPerArea": 11,
-      "rotationOffset": 2
+      "daysPerArea": 9,
+      "rotationOffset": 0
     }
   ],
   "animalEvents": {

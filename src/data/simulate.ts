@@ -318,6 +318,9 @@ function simulateHerds(rng: Rng, schedule: Map<string, string[]>, weather: DayWe
   return { steps, herdDays };
 }
 
+/** Daily regrowth as a share of standing crop, at the peak of the logistic curve. */
+const GROWTH_RATE = 0.17;
+
 /** season offtake as a share of what the area can safely give up */
 const utilizationOf = (offtake: number, p: { biomassCeiling: number }) =>
   clamp(offtake / (p.biomassCeiling * ALLOWABLE_USE), 0, 2);
@@ -355,7 +358,7 @@ function simulatePasture(rng: Rng, herdDays: HerdDay[], weather: DayWeather[]): 
       const grazedHours = occupants.reduce((a, hd) => a + hd.budget.grazing / 60, 0);
 
       const growth =
-        0.17 *
+        GROWTH_RATE *
         s.biomass *
         (1 - s.biomass / p.biomassCeiling) *
         moisture *

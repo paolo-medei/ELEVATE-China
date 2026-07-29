@@ -17,7 +17,6 @@ import {
   SEASON_DAYS,
   RANCH_H,
   RANCH_W,
-  ROTATION,
   herds,
   landmarks,
   paddocks,
@@ -32,6 +31,20 @@ const weather = buildWeather(makeRng(880517), SEASON_DAYS).map((w) => ({
   tempC: w.tempC,
   windMs: w.windMs,
 }));
+
+/** meadow is the productive valley floor, sandy the stony ground that wears out first */
+const PASTURE = [
+  'typical', 'meadow', 'typical', 'typical',
+  'sandy', 'sandy', 'typical', 'sandy',
+  'meadow', 'meadow', 'meadow', 'typical',
+] as const;
+
+const PLAN = [
+  { rotation: ['P5', 'P1', 'P5', 'P9'], daysPerArea: 8, rotationOffset: 0 },
+  { rotation: ['P6', 'P2', 'P6', 'P10'], daysPerArea: 9, rotationOffset: 0 },
+  { rotation: ['P3', 'P7', 'P11'], daysPerArea: 14, rotationOffset: 0 },
+  { rotation: ['P8', 'P4', 'P8', 'P12'], daysPerArea: 9, rotationOffset: 0 },
+];
 
 const farm = {
   $readme: {
@@ -75,21 +88,30 @@ const farm = {
     baseMissRate: 0.0012,
   },
 
-  /** hectares are not listed: they come from the fence lines the layout draws */
-  areas: paddocks.map((p) => ({
+  /**
+   * The ground, area by area. Three of the twelve are stony — 5, 6 and 8 — and they are
+   * the ones the camps lean on, which is what puts a paddock out of grass by late July.
+   * Hectares are not listed: they come from the fence lines the layout draws.
+   */
+  areas: paddocks.map((p, i) => ({
     id: p.id,
     name: p.name,
-    pasture: p.soil,
+    pasture: PASTURE[i],
   })),
 
+  /**
+   * Where each herd goes. A list can name the same area twice: the stony paddock beside
+   * the water is used twice in every round, which is how the good intentions of a rotation
+   * turn into an over-grazed area by the middle of the season.
+   */
   herds: herds.map((h, i) => ({
     id: h.id,
     name: h.name,
     head: h.head,
     animalUnitsPerHead: h.auPerHead,
-    rotation: h.rotation,
-    daysPerArea: ROTATION[i].daysPerArea,
-    rotationOffset: ROTATION[i].offset,
+    rotation: PLAN[i].rotation,
+    daysPerArea: PLAN[i].daysPerArea,
+    rotationOffset: PLAN[i].rotationOffset,
   })),
 
   /**

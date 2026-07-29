@@ -54,8 +54,8 @@ generated from:
 | Sheet | One row per | Try changing |
 |---|---|---|
 | **Farm** | setting, as label + value | *Season length*, the wind limits, *Grass on best pasture*, *Map layout number* (redraws every fence line), and how many animals get flagged per day |
-| **Areas** | grazing area, with its grass type `meadow` / `typical` / `sandy` | make an area `sandy` — its Green Index falls and an overgrazing alert appears |
-| **Herds** | herd: cattle, which areas it grazes, days in each, where the cycle starts | *Cattle*, or `2, 6, 10` in *Grazes areas* |
+| **Areas** | grazing area, with its grass type `meadow` / `typical` / `sandy` | make an area `sandy` — its Green Index falls and it heads for its grazing limit |
+| **Herds** | herd: cattle, which areas it grazes, days in each, where the cycle starts | *Cattle*, or `2, 6, 10` in *Grazes areas* — naming the same area twice, as `5, 1, 5, 9` does, sends the herd back to it twice a round |
 | **Animals to watch** | animal flagged by hand: *Lost* / *Needs attention* / *Drifted from the group* / *Health check*, from a day, for a number of days | add a row with a cow ID like `2-050`, the day it started and how long it lasts |
 | **Weather** | day: rain, temperature, wind | set a wind above 11 m/s and that day's flight is grounded, the count carries over, and the alert follows |
 
@@ -96,7 +96,7 @@ Worked examples, all measured on the standalone file:
 - mark 40 animals of Herd 2 *Seen = no* on the last flight → *cattle detected* 1,319 → 1,279, and the
   warning panel reads *"Herd 2 · 40 missing of 355"*
 - move one animal's latitude and longitude → that dot moves on the map, with its new GPS in its record
-- drop an area's green index to 0.05 → farm greenness falls with it, and that area reads *out of grass*
+- drop an area's green index to 0.05 → farm greenness falls with it, and that area reads *grazed too hard*
 - cut Herd 1 from 405 to 150 cattle → registered total 1,320 → 1,065 on every screen
 - set one day's wind to 14.2 m/s → *last drone flight* falls back to the day before
 
@@ -140,7 +140,8 @@ grass.
 
 Then the **herd map** over the plateau terrain: ridges, the Turgen gorge, the Assy river, the
 Bartogai reservoir and the track up from Turgen. Grazing areas are coloured by how much grass they
-have left — mostly green, a few amber, one area out of grass. Switch between **All herds** and any
+have left: nine within their limit, **Areas 6 and 8 grazed hard**, and **Area 5 grazed past its
+limit**. Switch between **All herds** and any
 single herd: all-herds shows one marker per herd, a single herd zooms in and draws **every animal**,
 coloured by detection confidence. Flagged animals are always circled and labelled, whatever the
 zoom. Click any animal for its record: ID, GPS, ground height, last seen, distance walked, time
@@ -197,6 +198,14 @@ teach them to ignore the screen:
    on a hot afternoon the whole mob lies up for sixteen hours, and an absolute threshold would flag a
    quarter of them every time.
 4. **One errand, one line.** Findings that send the same person to the same place are one job.
+5. **"Grazed too hard" is not "out of grass".** An area past its seasonal allowance still looks green
+   — that is exactly the trap the measure exists to catch, and the card says so rather than claiming
+   the paddock is bare.
+
+Three of the twelve areas are stony ground, and the camps lean on them: two herds return to their
+poorest paddock twice in every round. By late July that has put **Area 5 past its limit and Areas 6
+and 8 close to it**, while the nine meadow and typical areas are fine. It is the ordinary way a
+rotation goes wrong, and it is what the grass side of the app is for.
 
 ## Project layout
 
