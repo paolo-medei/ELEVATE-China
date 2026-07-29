@@ -190,16 +190,6 @@ export const ROTATION = FARM.herds.map((h) => ({
   offset: h.rotationOffset,
 }));
 
-/**
- * Animals that have genuinely gone missing and stay missing. The flight count subtracts
- * them and the per-animal view marks them, so both tell the same story.
- */
-export const LOST_ANIMALS: { cowId: string; herdId: string; fromDay: number }[] =
-  FARM.animalEvents.lost;
-
-export const lostOn = (herdId: string, day: number) =>
-  LOST_ANIMALS.filter((l) => l.herdId === herdId && day >= l.fromDay);
-
 export const herdById = new Map(herds.map((h) => [h.id, h]));
 export const TOTAL_HEAD = herds.reduce((a, h) => a + h.head, 0);
 export const TOTAL_AU = herds.reduce((a, h) => a + h.head * h.auPerHead, 0);

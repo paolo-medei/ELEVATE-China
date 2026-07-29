@@ -61,6 +61,7 @@ const DICT = {
   warnMissingN: { en: '{n} missing of {all}', zh: '{all} 头中缺 {n} 头' },
   warnAllPresent: { en: 'All {n} present', zh: '{n} 头全部在场' },
   warnSeparatedN: { en: '{n} temporarily apart', zh: '{n} 头暂时离群' },
+  warnCountShort: { en: 'Count not finished', zh: '清点未完成' },
   mapPlayHint: {
     en: 'Press play to watch the animals move through the day.',
     zh: '点击播放，观看牛群一天中的移动。',
@@ -110,6 +111,7 @@ const DICT = {
   },
   histSeason: { en: 'Season', zh: '牧季' },
   histLost: { en: 'Animals lost', zh: '走失头数' },
+  kindFlight: { en: 'Flight', zh: '航拍' },
   histWalkedAvg: { en: 'Walked (daily avg)', zh: '日均行走' },
 
   // sections

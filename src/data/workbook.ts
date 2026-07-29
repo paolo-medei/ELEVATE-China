@@ -214,7 +214,7 @@ export async function farmFromWorkbook(file: File): Promise<Farm> {
         throw new WorkbookError(`Animals row ${line}: "${cowId}" is not a cow ID — they read like 3-201`);
       }
       if (kind.startsWith('lost')) {
-        events.lost.push({ cowId, herdId: `H${cowId.split('-')[0]}`, fromDay });
+        events.lost.push({ cowId, herdId: `H${cowId.split('-')[0]}`, fromDay, days });
       } else if (kind.startsWith('needs')) {
         events.needsAttention.push({ cowId, fromDay, days, awayM, side });
       } else if (kind.startsWith('drifted') || kind.startsWith('separated')) {

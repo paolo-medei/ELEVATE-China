@@ -58,6 +58,10 @@ export function TodayView({
   const attention = cows.filter(
     (c) => c.flags.includes('isolated') && c.flags.includes('stationary'),
   );
+  // a shortened round misses animals by itself, so its gap is not a herd's missing count
+  const countComplete = data.flights.some(
+    (f) => f.day === day && f.detections.length > 0 && f.status === 'complete',
+  );
   const missingByHerd = data.herds.map((h) => ({
     herd: h,
     missing: cows.filter((c) => c.cow.herdId === h.id && c.surveyed && !c.detected).length,
@@ -130,13 +134,17 @@ export function TodayView({
                   />
                   <span className="warn-herd">{b(herd.name)}</span>
                   <span
-                    className={`warn-num ${missing > 0 ? 'bad' : separated > 0 ? 'warn' : 'ok'}`}
+                    className={`warn-num ${
+                      !countComplete ? 'warn' : missing > 0 ? 'bad' : separated > 0 ? 'warn' : 'ok'
+                    }`}
                   >
-                    {missing > 0
-                      ? t('warnMissingN', { n: missing, all: herd.head })
-                      : separated > 0
-                        ? t('warnSeparatedN', { n: separated })
-                        : t('warnAllPresent', { n: herd.head })}
+                    {!countComplete
+                      ? t('warnCountShort')
+                      : missing > 0
+                        ? t('warnMissingN', { n: missing, all: herd.head })
+                        : separated > 0
+                          ? t('warnSeparatedN', { n: separated })
+                          : t('warnAllPresent', { n: herd.head })}
                   </span>
                 </li>
               ))}

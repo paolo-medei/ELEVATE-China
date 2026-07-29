@@ -81,8 +81,11 @@ An incident has an end as well as a beginning. A cow that drifts off and stops m
 next round; a lame animal is treated. Flagging the same two animals every day for a whole season is
 what a broken system looks like — so incidents open day by day from the three rates on the **Farm**
 sheet, each lasts a few days, and closes. Today's list is never yesterday's. The **Animals to watch**
-sheet is for naming a particular animal on a particular day on top of that; a *Lost* animal has no
-end, which is exactly what makes it lost.
+sheet is for naming a particular animal on a particular day on top of that.
+
+That includes an animal the count cannot find. It misses the morning count, misses it again, someone
+rides out, and it is back: two or three mornings, not a month. An animal reported unseen for
+twenty-five days is not a monitoring system — it is a farm that has stopped looking.
 
 Where two sheets speak about the same thing, **the finer record wins**: per-animal rows settle the
 herd count, so the dashboard can never say a herd is complete while the map shows forty animals it
@@ -178,14 +181,22 @@ that into individual animals: **which animals the drone missed is derived from t
 mission already reported**, so the per-animal view can never disagree with the herd totals, and the
 history page re-runs the very same rules across the whole season.
 
-Three things the demo is careful about, because each would cost a farmer a wasted day:
+Four things the demo is careful about, because each would cost a farmer a wasted day — or, worse,
+teach them to ignore the screen:
 
-1. **A short flight is not a missing cow.** Above 11 m/s the fleet stays down; the screen says the
-   round could not be finished and asks for a recount instead of reporting losses.
-2. **Ordinary occlusion is not a missing cow either.** Which animals are hidden changes every day, so
-   "not seen for nine days" means something. Three animals genuinely go missing during the season.
+1. **A short flight is not a missing cow.** Above the launch limit the fleet stays down and above the
+   full-round limit it flies a shorter route; on either morning the herd panel says *count not
+   finished*, the history chart shows a gap rather than a spike, and the card says the gap is about
+   the wind rather than the cattle.
+2. **Ordinary occlusion is not a missing cow either.** Which animals are hidden changes every day. An
+   animal absent from **two counts running** is worth the ride out, and that is where the search job
+   appears — not after a fortnight. Nothing here reports an animal unseen for weeks, because no
+   working operation would let that happen.
 3. **Away from the herd *and* not moving** is the combination that gets an animal flagged as urgent —
-   either signal alone is normal behaviour.
+   either signal alone is normal behaviour. And "not moving" is measured against the herd's own day:
+   on a hot afternoon the whole mob lies up for sixteen hours, and an absolute threshold would flag a
+   quarter of them every time.
+4. **One errand, one line.** Findings that send the same person to the same place are one job.
 
 ## Project layout
 

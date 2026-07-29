@@ -8,7 +8,7 @@
     "flights": "Drone schedule and limits. The first hour is the counting mission; wind above groundedAboveWindMs cancels the day, above shortenedAboveWindMs cuts it short. baseMissRate is how often a visible animal is missed.",
     "areas": "One entry per grazing area. pasture is meadow (best), typical, or sandy (poorest) — change it and the grass, the Green Index and the overgrazing alerts all move.",
     "herds": "Herd size, the areas it rotates through, how many days it stays in each, and where in the cycle it starts.",
-    "animalEvents": "Who the system flags. lost = gone and still gone. The perDay rates open new incidents day by day, each lasting a few days, so today's list is never yesterday's; the lists name a particular animal on a particular day on top of that.",
+    "animalEvents": "Who the system flags. The perDay rates open new incidents day by day — each runs for a few days and then closes, so today's list is never yesterday's. The lists name a particular animal on a particular day on top of that.",
     "weather": "One row per day. Rain drives grass growth, temperature drives grazing hours, wind decides whether the drone flies."
   },
   "meta": {
@@ -217,17 +217,12 @@
   "animalEvents": {
     "seed": 5150724,
     "perDay": {
+      "lost": 0.14,
       "needsAttention": 0.55,
       "separated": 0.75,
       "welfare": 0.4
     },
-    "lost": [
-      {
-        "cowId": "3-201",
-        "herdId": "H3",
-        "fromDay": 34
-      }
-    ],
+    "lost": [],
     "needsAttention": [],
     "separated": [],
     "welfare": []

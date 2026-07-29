@@ -38,6 +38,7 @@ const settingRows = (f: Farm) => [
   ['Cattle the camera misses (share)', f.flights.baseMissRate, '0.0012 means about 1 in 800'],
   ['Map layout number', f.meta.layoutSeed, 'Change it to redraw the fence lines'],
   ['Animals flagged per day — needs attention', f.animalEvents.perDay.needsAttention, 'Chance a new one is found each day; each lasts 1–3 days'],
+  ['Counts short per day', f.animalEvents.perDay.lost, 'Chance an animal misses the morning count; it stays missing for 2–3 mornings'],
   ['Animals flagged per day — drifted', f.animalEvents.perDay.separated, 'Each lasts 1–2 days'],
   ['Animals flagged per day — health check', f.animalEvents.perDay.welfare, 'Each lasts 2–4 days'],
   ['Flagging seed', f.animalEvents.seed, 'Change it to draw a different set of animals'],
@@ -54,8 +55,7 @@ export const ANIMAL_KINDS = {
 
 function animalRows(f: Farm) {
   const rows: (string | number | null)[][] = [];
-  // a lost animal has no end: that is what makes it lost
-  for (const a of f.animalEvents.lost) rows.push([ANIMAL_KINDS.lost, a.cowId, a.fromDay, null, null, null]);
+  for (const a of f.animalEvents.lost) rows.push([ANIMAL_KINDS.lost, a.cowId, a.fromDay, a.days, null, null]);
   for (const a of f.animalEvents.needsAttention)
     rows.push([ANIMAL_KINDS.needsAttention, a.cowId, a.fromDay, a.days, a.awayM, a.side]);
   for (const a of f.animalEvents.separated)

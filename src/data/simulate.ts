@@ -5,7 +5,6 @@ import {
   elevationAt,
   INTAKE_KG_AU_DAY,
   landmarks,
-  lostOn,
   M_PER_DEG_LAT,
   M_PER_DEG_LON,
   ORIGIN,
@@ -20,6 +19,7 @@ import {
   water,
 } from './ranch';
 import { FARM } from './source';
+import { lostOn } from './incidents';
 import { countRecord, cowTally, grasslandRecord } from './records';
 import type {
   Alert,
@@ -465,8 +465,10 @@ function simulateFlights(rng: Rng, herdDays: HerdDay[], weather: DayWeather[]): 
           let missRate = FARM.flights.baseMissRate + (hd.meanSpreadM < 160 ? 0.0025 : 0);
           if (w.tempC > 32) missRate += 0.002;
           if (partial) missRate += 0.03;
+          // a herd that has pushed through a fence is spread wider than the flight plan
+          // allows for, so a few more are outside the frame — a few, not a fifteenth
           const breachDay = BREACHES.some((b) => b.herdId === herd.id && b.day === day);
-          if (breachDay) missRate += 0.075;
+          if (breachDay) missRate += 0.012;
           const detected = clamp(
             expected - Math.round(expected * missRate) - lostOn(herd.id, day).length,
             Math.round(expected * 0.82),

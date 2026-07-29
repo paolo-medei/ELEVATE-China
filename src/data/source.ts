@@ -16,8 +16,8 @@ export type Farm = Omit<typeof defaultFarm, 'animalEvents'> & {
    */
   animalEvents: {
     seed: number;
-    perDay: { needsAttention: number; separated: number; welfare: number };
-    lost: { cowId: string; herdId: string; fromDay: number }[];
+    perDay: { lost: number; needsAttention: number; separated: number; welfare: number };
+    lost: { cowId: string; herdId: string; fromDay: number; days: number }[];
     needsAttention: Incident[];
     separated: Incident[];
     welfare: { cowId: string; fromDay: number; days: number }[];

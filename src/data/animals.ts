@@ -1,8 +1,8 @@
 import { makeRng } from '../lib/rng';
 import { dist, fromLatLon, pointInPolygon } from '../lib/geo';
 import { cowRecord, cowTallyForDay } from './records';
-import { elevationAt, herds, LOST_ANIMALS, paddockById, RANCH_H, RANCH_W, SEASON_DAYS } from './ranch';
-import { FARM } from './source';
+import { elevationAt, herds, paddockById, RANCH_H, RANCH_W } from './ranch';
+import { ATTENTION, LOST_ANIMALS, on, SEPARATED, WELFARE } from './incidents';
 import type { Dataset, Pt } from './types';
 
 /** One ear-tagged animal. IDs read "1-042": herd number, then the animal's number in it. */
@@ -53,100 +53,6 @@ export type CowState = {
 const hash = (herdId: string, day: number) => herdId.charCodeAt(1) * 7919 + day * 104729;
 
 /**
- * Animals that genuinely go missing and stay missing — the case the whole system exists
- * for. Everything else that fails to show up is ordinary day-to-day occlusion.
- */
-const LOST = LOST_ANIMALS;
-
-/**
- * An incident has an end as well as a beginning.
- *
- * A cow that drifts off and stops moving is found on the next round; a lame animal is
- * treated and walks normally again. Flagging the same two animals every single day for a
- * whole season is what a broken system looks like, not a working one — so every incident
- * runs for a few days and then closes, and new ones open behind it.
- */
-export type Incident = {
-  cowId: string;
-  fromDay: number;
-  /** how many days it lasts, counting the first */
-  days: number;
-  awayM: number;
-  side: number;
-};
-
-const rates = FARM.animalEvents.perDay;
-
-/**
- * The background stream of incidents: who is flagged, on which days, drawn once for the
- * whole season from a fixed seed so the same day always tells the same story. Rates come
- * from the database, so a farm with more trouble is one number away.
- */
-function rollIncidents() {
-  const rng = makeRng(FARM.animalEvents.seed);
-  const attention: Incident[] = [];
-  const separated: Incident[] = [];
-  const welfare: Incident[] = [];
-  const busy = new Set<string>();
-
-  const open = (
-    into: Incident[],
-    day: number,
-    minDays: number,
-    maxDays: number,
-    away: [number, number],
-  ) => {
-    // never flag an animal that is already flagged, or genuinely lost
-    for (let tries = 0; tries < 8; tries++) {
-      const cow = cows[rng.int(0, cows.length - 1)];
-      if (busy.has(cow.id) || LOST.some((l) => l.cowId === cow.id)) continue;
-      const days = rng.int(minDays, maxDays);
-      busy.add(cow.id);
-      into.push({
-        cowId: cow.id,
-        fromDay: day,
-        days,
-        awayM: Math.round(rng.range(away[0], away[1])),
-        side: Math.round(rng.gauss(0, 260)),
-      });
-      return;
-    }
-  };
-
-  for (let day = 0; day < SEASON_DAYS; day++) {
-    // an animal flagged a few days ago is available again
-    for (const list of [attention, separated, welfare]) {
-      for (const e of list) if (day === e.fromDay + e.days) busy.delete(e.cowId);
-    }
-    if (rng.next() < rates.needsAttention) open(attention, day, 1, 3, [900, 1400]);
-    if (rng.next() < rates.separated) open(separated, day, 1, 2, [600, 900]);
-    if (rng.next() < rates.welfare) open(welfare, day, 2, 4, [0, 0]);
-  }
-  return { attention, separated, welfare };
-}
-
-const rolled = rollIncidents();
-
-/** whether an incident covers a given day */
-const on = (e: { fromDay: number; days?: number }, day: number) =>
-  day >= e.fromDay && day < e.fromDay + (e.days ?? Infinity);
-
-/** Hand-written incidents from the database come first, then the rolled ones. */
-const scripted = FARM.animalEvents;
-
-/** Animals that have drifted off the mob but are still walking and grazing normally. */
-export const SEPARATED: Incident[] = [
-  ...(scripted.separated as Incident[]),
-  ...rolled.separated,
-];
-
-/** Animals the imagery flagged for how they move. */
-export const WELFARE: { cowId: string; fromDay: number; days?: number }[] = [
-  ...scripted.welfare,
-  ...rolled.welfare,
-];
-
-/**
  * Which animals the drone failed to pick out, derived from the herd count the mission
  * already reported — so the individual view can never disagree with the herd totals.
  */
@@ -165,9 +71,9 @@ function missedIds(data: Dataset, day: number, herdId: string): Set<string> {
   if (gap <= 0) return new Set();
 
   const out = new Set<string>();
-  // a lost animal is missing whatever the rest of the count says
-  for (const l of LOST) {
-    if (day >= l.fromDay && roster.some((c) => c.id === l.cowId)) out.add(l.cowId);
+  // an animal the search has not found yet is missing whatever the rest of the count says
+  for (const l of LOST_ANIMALS) {
+    if (on(l, day) && roster.some((c) => c.id === l.cowId)) out.add(l.cowId);
   }
 
   // the rest is occlusion: mostly luck of the frame, nudged by how edgy the animal is
@@ -276,17 +182,28 @@ export function cowSnapshot(data: Dataset, day: number, hour: number): CowState[
         }
       }
 
+      /*
+       * Still time is measured against the herd's own day, not a fixed number of hours.
+       * On a hot day the whole mob lies up for sixteen hours, and an absolute threshold
+       * flagged half of them — which is a broken alarm, not a finding. What matters is
+       * an animal that is far stiller than the herd it is standing in.
+       */
+      const herdStill = herdDay ? (herdDay.budget.resting + herdDay.budget.ruminating) / 60 : 0;
       const stillHours = attention
-        ? 20.5 + (cow.idx % 5) * 0.3
-        : herdDay
-          ? ((herdDay.budget.resting + herdDay.budget.ruminating) / 60) * (2 - cow.activity)
-          : 0;
+        ? herdStill + 6.5 + (cow.idx % 5) * 0.2
+        : herdStill * (2 - cow.activity);
+
       const flags: CowFlag[] = [];
       if (surveyed && !detected) flags.push('notFound');
       if (attention) flags.push('isolated');
       else if (separated) flags.push('separated');
-      // only genuinely abnormal stillness counts; a long rest in the heat is normal
-      if (stillHours > 18) flags.push('stationary');
+      /*
+       * The margin sits above anything the natural spread of rest time can reach — the
+       * quietest animal in a mob lies up about a fifth longer than the average, which on
+       * a long day is four hours and is not a finding. Flagging the tail of a normal
+       * distribution every hot afternoon is how an alarm gets ignored.
+       */
+      if (stillHours > herdStill + 5 && stillHours > 14) flags.push('stationary');
       if (flagged.has(cow.id)) flags.push('sick');
 
       out.push({
@@ -339,6 +256,7 @@ export function cowSeverity(state: CowState): 'critical' | 'serious' | 'warning'
 }
 
 export { elevationAt };
+export { ATTENTION, SEPARATED, WELFARE } from './incidents';
 
 /**
  * The two animals the demo is built around: they drift away from Herd 1 and stop moving,
@@ -365,7 +283,10 @@ export function attentionByDay(data: Dataset): DayAttention[] {
   attentionCache = Array.from({ length: data.meta.days }, (_, day) => {
     const states = cowSnapshot(data, day, 8);
     const has = (f: CowFlag) => states.filter((c) => c.flags.includes(f)).length;
-    const counted = data.flights.some((f) => f.day === day && f.detections.length > 0);
+    // only a finished round can say an animal was absent; a shortened one proves nothing
+    const counted = data.flights.some(
+      (f) => f.day === day && f.detections.length > 0 && f.status === 'complete',
+    );
     return {
       day,
       missing: counted ? states.filter((c) => c.surveyed && !c.detected).length : null,
@@ -377,8 +298,3 @@ export function attentionByDay(data: Dataset): DayAttention[] {
   });
   return attentionCache;
 }
-
-export const ATTENTION: Incident[] = [
-  ...(FARM.animalEvents.needsAttention as Incident[]),
-  ...rolled.attention,
-];

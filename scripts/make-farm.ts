@@ -43,7 +43,7 @@ const farm = {
     flights: 'Drone schedule and limits. The first hour is the counting mission; wind above groundedAboveWindMs cancels the day, above shortenedAboveWindMs cuts it short. baseMissRate is how often a visible animal is missed.',
     areas: 'One entry per grazing area. pasture is meadow (best), typical, or sandy (poorest) — change it and the grass, the Green Index and the overgrazing alerts all move.',
     herds: 'Herd size, the areas it rotates through, how many days it stays in each, and where in the cycle it starts.',
-    animalEvents: 'Who the system flags. lost = gone and still gone. The perDay rates open new incidents day by day, each lasting a few days, so today\'s list is never yesterday\'s; the lists name a particular animal on a particular day on top of that.',
+    animalEvents: 'Who the system flags. The perDay rates open new incidents day by day — each runs for a few days and then closes, so today\'s list is never yesterday\'s. The lists name a particular animal on a particular day on top of that.',
     weather: 'One row per day. Rain drives grass growth, temperature drives grazing hours, wind decides whether the drone flies.',
   },
 
@@ -95,16 +95,16 @@ const farm = {
   /**
    * Who the system flags, and how often.
    *
-   * `lost` animals stay lost — that is the case the whole thing exists for. Everything
-   * else comes and goes: the rates below open new incidents day by day, each lasting a
-   * few days, so today's list is never yesterday's. The four lists are for naming a
-   * particular animal on a particular day on top of that.
+   * Everything here comes and goes: the rates open new incidents day by day, each runs
+   * for a few days and closes. A count that comes up short is settled within two or three
+   * mornings — a working operation does not leave an animal unaccounted for a month. The
+   * four lists are for naming a particular animal on a particular day on top of that.
    */
   animalEvents: {
     seed: 5150724,
     /** chance of a new incident of each kind opening on any given day */
-    perDay: { needsAttention: 0.55, separated: 0.75, welfare: 0.4 },
-    lost: [{ cowId: '3-201', herdId: 'H3', fromDay: 34 }],
+    perDay: { lost: 0.14, needsAttention: 0.55, separated: 0.75, welfare: 0.4 },
+    lost: [] as { cowId: string; herdId: string; fromDay: number; days: number }[],
     needsAttention: [] as { cowId: string; fromDay: number; days: number; awayM: number; side: number }[],
     separated: [] as { cowId: string; fromDay: number; days: number; awayM: number; side: number }[],
     welfare: [] as { cowId: string; fromDay: number; days: number }[],

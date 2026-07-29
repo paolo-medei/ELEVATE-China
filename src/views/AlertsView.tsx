@@ -9,14 +9,14 @@ const SNAPSHOT_HOUR = 8;
 
 const KIND_LABEL: Record<
   Issue['kind'],
-  'flag_notFound' | 'flag_isolated' | 'flag_sick' | 'flag_separated' | 'state_outOfGrass' | 'aborted'
+  'flag_notFound' | 'flag_isolated' | 'flag_sick' | 'flag_separated' | 'state_outOfGrass' | 'kindFlight'
 > = {
   missing: 'flag_notFound',
   attention: 'flag_isolated',
   separated: 'flag_separated',
   sick: 'flag_sick',
   grass: 'state_outOfGrass',
-  flight: 'aborted',
+  flight: 'kindFlight',
 };
 
 export function AlertsView({ data, day }: { data: Dataset; day: number }) {

@@ -1,5 +1,6 @@
 import { cowSeverity, type CowState } from '../data/animals';
 import { paddockById } from '../data/ranch';
+import { FARM } from '../data/source';
 import { formatLatLon, pointInPolygon, toLatLon } from './geo';
 import { paddockState } from './status';
 import type { Bilingual, Dataset, Severity } from '../data/types';
@@ -135,7 +136,8 @@ export function buildIssues(data: Dataset, day: number, cows: CowState[]): Issue
   for (const herd of data.herds) {
     const missing = cows.filter((c) => c.cow.herdId === herd.id && c.surveyed && !c.detected);
     if (!missing.length) continue;
-    const longGone = missing.filter((c) => c.lastSeenDaysAgo >= 3);
+    // one missed count is shade or cover; two mornings running is worth the ride out
+    const longGone = missing.filter((c) => c.lastSeenDaysAgo >= 2);
     if (!longGone.length) {
       shortToday.push({ herd, missing });
       continue;
@@ -154,15 +156,21 @@ export function buildIssues(data: Dataset, day: number, cows: CowState[]): Issue
         en: `${ids.length} missing from ${herd.name.en}`,
         zh: `${herd.name.zh} 走失 ${ids.length} 头`,
       },
-      what: {
-        en: `The drone counted ${herd.head - missing.length} of ${herd.head}. ${ids.join(', ')} ${
-          ids.length === 1 ? 'has' : 'have'
-        } not been seen for ${days} days.`,
-        zh: `无人机清点 ${herd.head - missing.length}/${herd.head} 头。${ids.join('、')} 已 ${days} 天未见。`,
-      },
+      what: flightFinished
+        ? {
+            en: `This morning's count found ${herd.head - missing.length} of ${herd.head}. ${ids.join(', ')} ${
+              ids.length === 1 ? 'was' : 'were'
+            } not in ${days === 2 ? 'the last two counts' : `the last ${days} counts`} either.`,
+            zh: `今晨清点 ${herd.head - missing.length}/${herd.head} 头。${ids.join('、')} 已连续 ${days} 次清点未入画。`,
+          }
+        : {
+            // a shortened flight misses animals by itself, so the raw gap says nothing
+            en: `This morning's flight was cut short by wind, so the count is incomplete. ${ids.join(', ')} also missed the ${days - 1 === 1 ? 'count before' : `${days - 1} counts before`}.`,
+            zh: `今晨航拍因大风缩短，清点不完整。${ids.join('、')} 在此前 ${days - 1} 次清点中同样未出现。`,
+          },
       why: {
-        en: 'An animal absent from several flights in a row is not hiding under a tree — it has strayed through a fence line, is down in a gully, or has been taken.',
-        zh: '连续多次航拍均未出现，通常不是被遮挡，而是已越界走失、跌落沟谷或被捕食。',
+        en: 'One missed count is usually an animal in shade or under cover. Two mornings running is worth a look — most turn up in a gully or through a gap in the fence.',
+        zh: '单次未识别多为遮挡所致；连续两个清晨未出现则值得实地查看，多数会在沟谷或围栏缺口附近找到。',
       },
       task: {
         en: `Find ${ids.length} missing ${ids.length === 1 ? 'cow' : 'cows'} in ${herd.name.en}${
@@ -171,8 +179,8 @@ export function buildIssues(data: Dataset, day: number, cows: CowState[]): Issue
         zh: `寻找${herd.name.zh}走失的 ${ids.length} 头牛${area ? `（${area.name.zh}）` : ''}`,
       },
       action: {
-        en: `Search the gullies and the fence line near the coordinates below for ${ids.join(', ')}.`,
-        zh: `请在下方坐标附近的沟谷与围栏一带寻找 ${ids.join('、')}。`,
+        en: `Have a look along the gullies and the fence line near the coordinates below for ${ids.join(', ')} on your next round.`,
+        zh: `下次巡场时，请在下方坐标附近的沟谷与围栏一带查看 ${ids.join('、')}。`,
       },
     });
   }
@@ -188,16 +196,21 @@ export function buildIssues(data: Dataset, day: number, cows: CowState[]): Issue
       herdId: shortToday.length === 1 ? shortToday[0].herd.id : undefined,
       cowIds: shortToday.flatMap((s) => s.missing.map((c) => c.cow.id)),
       gps: gpsOf(shortToday[0].missing[0].at),
-      title: {
-        en:
-          shortToday.length === 1
-            ? `${total} not in frame in ${shortToday[0].herd.name.en}`
-            : `${total} not in frame across ${shortToday.length} herds`,
-        zh:
-          shortToday.length === 1
-            ? `${shortToday[0].herd.name.zh} 有 ${total} 头未入画`
-            : `${shortToday.length} 个牛群共 ${total} 头未入画`,
-      },
+      title: !flightFinished
+        ? {
+            en: `This morning's count was cut short — ${names}`,
+            zh: `今晨清点因大风中断 —— ${namesZh}`,
+          }
+        : {
+            en:
+              shortToday.length === 1
+                ? `${total} not in frame in ${shortToday[0].herd.name.en}`
+                : `${total} not in frame across ${shortToday.length} herds`,
+            zh:
+              shortToday.length === 1
+                ? `${shortToday[0].herd.name.zh} 有 ${total} 头未入画`
+                : `${shortToday.length} 个牛群共 ${total} 头未入画`,
+          },
       what: flightFinished
         ? {
             en: `${names} each came up short by one or two this morning: ${shortToday
@@ -211,10 +224,15 @@ export function buildIssues(data: Dataset, day: number, cows: CowState[]): Issue
             en: `The flight was cut short by wind, so this morning's count is incomplete: ${names} were only partly in frame.`,
             zh: `本次航拍因大风缩短，今晨清点不完整：${namesZh} 仅部分入画。`,
           },
-      why: {
-        en: 'One missed count is usually an animal in shadow or under cover. It matters only if the same animal is missing again tomorrow.',
-        zh: '单次未识别多为遮挡所致。若次日同一头牛仍未出现，才需重视。',
-      },
+      why: flightFinished
+        ? {
+            en: 'One missed count is usually an animal in shade or under cover. It matters only if the same animal is missing again tomorrow.',
+            zh: '单次未识别多为遮挡所致。若次日同一头牛仍未出现，才需重视。',
+          }
+        : {
+            en: 'A shortened round misses animals by itself, so this gap is about the wind, not the cattle. Nobody needs to go looking on the strength of it.',
+            zh: '缩短的航线本身就会漏拍，此处的差额源于大风而非牛群，不必据此派人搜寻。',
+          },
       task: {
         en:
           shortToday.length === 1
@@ -343,28 +361,38 @@ export function buildIssues(data: Dataset, day: number, cows: CowState[]): Issue
     });
   }
 
-  /* 5 — the flight itself */
-  if (!flightFinished) {
+  /*
+   * 5 — the flight itself. Grounded and shortened are different mornings and the card has
+   * to say which: quoting the launch limit on a day the drone actually flew, at a wind
+   * speed below that limit, is simply untrue.
+   */
+  if (!flightFinished && flightsToday.length) {
+    const wind = Math.max(...flightsToday.map((f) => f.windMs));
+    const grounded = flightsToday.every((f) => f.status === 'aborted');
     out.push({
       id: 'flight',
       kind: 'flight',
       severity: 'warning',
-      title: {
-        en: 'The drone could not finish its round',
-        zh: '无人机未完成巡查',
-      },
-      what: {
-        en: `Wind reached ${Math.max(...flightsToday.map((f) => f.windMs)).toFixed(1)} m/s, above the 11 m/s launch limit, so today's count covers only part of the herd.`,
-        zh: `风速达 ${Math.max(...flightsToday.map((f) => f.windMs)).toFixed(1)} m/s，超过 11 m/s 起飞限值，今日清点仅覆盖部分牛群。`,
-      },
+      title: grounded
+        ? { en: 'The drone stayed on the ground this morning', zh: '今晨无人机未起飞' }
+        : { en: 'The drone flew a shortened round', zh: '无人机航线缩短' },
+      what: grounded
+        ? {
+            en: `Wind reached ${wind.toFixed(1)} m/s, above the ${FARM.flights.groundedAboveWindMs} m/s launch limit, so there was no count this morning and the numbers carry over from the last flight.`,
+            zh: `风速达 ${wind.toFixed(1)} m/s，超过 ${FARM.flights.groundedAboveWindMs} m/s 起飞限值，今晨未清点，数据沿用上一次航拍。`,
+          }
+        : {
+            en: `Wind reached ${wind.toFixed(1)} m/s, above the ${FARM.flights.shortenedAboveWindMs} m/s limit for a full round, so the drone flew a shorter route and part of the ground was not covered.`,
+            zh: `风速达 ${wind.toFixed(1)} m/s，超过完整航线所需的 ${FARM.flights.shortenedAboveWindMs} m/s 限值，航线缩短，部分区域未覆盖。`,
+          },
       why: {
-        en: 'An incomplete count looks exactly like missing cattle. Treat today\'s numbers as provisional rather than sending anyone out to search.',
-        zh: '不完整的清点与真正走失难以区分，今日数据应视为临时结果，不必据此派人搜寻。',
+        en: 'An incomplete count looks exactly like missing cattle. Treat this morning\'s numbers as provisional rather than sending anyone out to search.',
+        zh: '不完整的清点与真正走失难以区分，今晨数据应视为临时结果，不必据此派人搜寻。',
       },
       task: { en: 'Fly the count again when the wind drops', zh: '待风力减弱后重新航拍' },
       action: {
-        en: 'Fly the count again as soon as the wind drops.',
-        zh: '待风力减弱后重新航拍清点。',
+        en: 'Fly the count again as soon as the wind drops. Nothing here needs anyone to ride out.',
+        zh: '待风力减弱后重新航拍清点。此项无需派人前往。',
       },
     });
   }
