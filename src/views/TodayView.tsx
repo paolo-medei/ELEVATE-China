@@ -24,6 +24,7 @@ export function TodayView({
 }) {
   const { t, b, lang } = useUi();
   const [herdFilter, setHerdFilter] = useState<string | null>(null);
+  const [riskOnly, setRiskOnly] = useState(false);
   const [selectedCow, setSelectedCow] = useState<string | null>(null);
   const [hour, setHour] = useState(SNAPSHOT_HOUR);
   const [playing, setPlaying] = useState(false);
@@ -63,7 +64,11 @@ export function TodayView({
     separated: cows.filter((c) => c.cow.herdId === h.id && c.flags.includes('separated')).length,
   }));
 
-  const shown = herdFilter ? mapCows.filter((c) => c.cow.herdId === herdFilter) : mapCows;
+  // the map draws every animal by default; the toggle strips it back to the ones with
+  // something against their name, so a few dots are not lost in thirteen hundred
+  const inHerd = herdFilter ? mapCows.filter((c) => c.cow.herdId === herdFilter) : mapCows;
+  const shown = riskOnly ? inHerd.filter((c) => c.flags.length > 0) : inHerd;
+  const riskCount = inHerd.filter((c) => c.flags.length > 0).length;
   const mapHighlight = mapCows.filter(
     (c) =>
       c.flags.includes('isolated') &&
@@ -224,8 +229,23 @@ export function TodayView({
               ...data.herds.map((h) => ({ value: h.id, label: b(h.name) })),
             ]}
           />
+          <button
+            type="button"
+            className="ghost-btn risk-toggle"
+            aria-pressed={riskOnly}
+            onClick={() => setRiskOnly((v) => !v)}
+          >
+            <span className="risk-dot" aria-hidden="true" />
+            {t('mapRiskOnly')} <span className="risk-count">{riskCount}</span>
+          </button>
         </div>
-        <p className="big-sub">{herdFilter ? t('mapHerdSub', { n: fmt(shown.length) }) : t('mapAllSub')}</p>
+        <p className="big-sub">
+          {riskOnly
+            ? t('mapRiskSub', { n: fmt(shown.length) })
+            : herdFilter
+              ? t('mapHerdSub', { n: fmt(shown.length) })
+              : t('mapAllSub')}
+        </p>
 
         <HerdMap
           data={data}
@@ -233,6 +253,8 @@ export function TodayView({
           hour={hour}
           herdFilter={herdFilter}
           cowStates={shown}
+          frameStates={inHerd}
+          emphasise={riskOnly}
           highlight={mapHighlight}
           selectedCow={selectedCow}
           onSelectCow={setSelectedCow}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useUi } from '../i18n';
 import { cowSeverity, elevationAt, type CowState } from '../data/animals';
 import { landmarks, paddockById, RANCH_H, RANCH_W, water } from '../data/ranch';
@@ -90,6 +90,14 @@ export type HerdMapProps = {
   /** null = all herds as one marker each; a herd id = every animal in that herd */
   herdFilter: string | null;
   cowStates: CowState[];
+  /**
+   * The animals the view is framed around. Normally the same as `cowStates`, but when the
+   * map is filtered down to a handful of animals the frame should still be the herd they
+   * belong to — otherwise hiding the healthy stock would zoom the map into a paddock.
+   */
+  frameStates?: CowState[];
+  /** draw the remaining animals larger, since there are few of them to find */
+  emphasise?: boolean;
   /** animals to always call out by name, wherever the map is zoomed */
   highlight?: CowState[];
   selectedCow?: string | null;
@@ -97,17 +105,43 @@ export type HerdMapProps = {
   height?: number;
 };
 
+/**
+ * On a phone the whole drawing is scaled to about half its width, which halves the map
+ * labels with it. This reports when that is happening so the lettering can be set larger
+ * in user units and land back at a readable size on the glass.
+ */
+function useCompactMap() {
+  const query = '(max-width: 760px)';
+  const [compact, setCompact] = useState(
+    () => typeof window !== 'undefined' && (window.matchMedia?.(query).matches ?? false),
+  );
+  useEffect(() => {
+    const mq = window.matchMedia?.(query);
+    if (!mq) return;
+    const update = () => setCompact(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+  return compact;
+}
+
 export function HerdMap({
   data,
   day,
   hour,
   herdFilter,
   cowStates,
+  frameStates,
+  emphasise = false,
   highlight = [],
   selectedCow,
   onSelectCow,
 }: HerdMapProps) {
   const { t, b } = useUi();
+  const compact = useCompactMap();
+  /** how much bigger the lettering has to be drawn to survive being scaled down */
+  const ls = compact ? 1.9 : 1;
   const [cursor, setCursor] = useState<string | null>(null);
   const [hoverArea, setHoverArea] = useState<string | null>(null);
 
@@ -121,9 +155,10 @@ export function HerdMap({
 
   // one herd selected → frame it, so individual animals are readable
   const vb = useMemo(() => {
-    if (!herdFilter || cowStates.length === 0) return { x: 0, y: 0, w: VB_W, h: VB_H };
-    const xs = cowStates.map((c) => c.at.x);
-    const ys = cowStates.map((c) => c.at.y);
+    const frame = frameStates ?? cowStates;
+    if (!herdFilter || frame.length === 0) return { x: 0, y: 0, w: VB_W, h: VB_H };
+    const xs = frame.map((c) => c.at.x);
+    const ys = frame.map((c) => c.at.y);
     const pad = 400;
     const cx = ((Math.min(...xs) + Math.max(...xs)) / 2) * SCALE;
     const cy = ((Math.min(...ys) + Math.max(...ys)) / 2) * SCALE;
@@ -133,7 +168,7 @@ export function HerdMap({
     if (w / h > aspect) h = w / aspect;
     else w = h * aspect;
     return { x: cx - w / 2, y: cy - h / 2, w, h };
-  }, [herdFilter, cowStates]);
+  }, [herdFilter, cowStates, frameStates]);
 
   const k = vb.w / VB_W;
 
@@ -296,7 +331,7 @@ export function HerdMap({
                 y={q.y + 14 * k}
                 textAnchor="middle"
                 className="terrain-label"
-                style={{ fontSize: 9 * k, strokeWidth: 2.6 * k }}
+                style={{ fontSize: 9 * k * ls, strokeWidth: 2.6 * k * ls }}
               >
                 {b(l.name)}
               </text>
@@ -314,7 +349,7 @@ export function HerdMap({
               y={c.y}
               textAnchor="middle"
               className="terrain-label strong"
-              style={{ fontSize: 11 * k, strokeWidth: 3 * k }}
+              style={{ fontSize: 11 * k * ls, strokeWidth: 3 * k * ls }}
             >
               {b(p.name)}
             </text>
@@ -322,7 +357,7 @@ export function HerdMap({
         })}
 
         {/* terrain names */}
-        <text x={px({ x: 1500, y: 700 }).x} y={px({ x: 0, y: 700 }).y} className="terrain-label italic" style={{ fontSize: 10 * k, strokeWidth: 3 * k }}>
+        <text x={px({ x: 1500, y: 700 }).x} y={px({ x: 0, y: 700 }).y} className="terrain-label italic" style={{ fontSize: 10 * k * ls, strokeWidth: 3 * k * ls }}>
           {t('turgenGorge')}
         </text>
         <text
@@ -330,7 +365,7 @@ export function HerdMap({
           y={px({ x: 0, y: 5900 }).y}
           textAnchor="middle"
           className="terrain-label italic"
-          style={{ fontSize: 10 * k, strokeWidth: 3 * k }}
+          style={{ fontSize: 10 * k * ls, strokeWidth: 3 * k * ls }}
         >
           {t('bartogai')}
         </text>
@@ -338,7 +373,7 @@ export function HerdMap({
           x={px({ x: 6600, y: 0 }).x}
           y={px({ x: 0, y: 5060 }).y}
           className="terrain-label italic"
-          style={{ fontSize: 9.5 * k, strokeWidth: 3 * k }}
+          style={{ fontSize: 9.5 * k * ls, strokeWidth: 3 * k * ls }}
         >
           {t('assyRiver')}
         </text>
@@ -363,10 +398,10 @@ export function HerdMap({
               key={c.cow.id}
               cx={q.x}
               cy={q.y}
-              r={(sel ? 5 : herdFilter ? 2.4 : 1.7) * k}
+              r={(sel ? 5 : emphasise ? 3.6 : herdFilter ? 2.4 : 1.7) * k}
               fill={c.detected ? colour : 'none'}
               stroke={c.detected ? (sel ? '#fff' : 'rgba(0,0,0,0.5)') : STATUS_VAR.critical}
-              strokeWidth={(sel ? 2 : c.detected ? 0.4 : 1.2) * k}
+              strokeWidth={(sel ? 2 : emphasise ? 1 : c.detected ? 0.4 : 1.2) * k}
               style={{ cursor: 'pointer' }}
               onClick={() => onSelectCow?.(sel ? null : c.cow.id)}
             />
@@ -392,17 +427,17 @@ export function HerdMap({
                 />
                 <circle
                   cx={q.x}
-                  cy={q.y - 26}
-                  r={11}
+                  cy={q.y - 26 * ls}
+                  r={11 * ls}
                   fill={SERIES_VAR(Number(herd.color.slice(1)))}
                   stroke="#fff"
-                  strokeWidth={2}
+                  strokeWidth={2 * ls}
                 />
                 <text
                   x={q.x}
-                  y={q.y - 22}
+                  y={q.y - 22 * ls}
                   textAnchor="middle"
-                  style={{ fill: '#fff', fontSize: 12, fontWeight: 700 }}
+                  style={{ fill: '#fff', fontSize: 12 * ls, fontWeight: 700 }}
                 >
                   {herd.id.slice(1)}
                 </text>
@@ -429,7 +464,7 @@ export function HerdMap({
                 y={q.y - 13 * k}
                 textAnchor="middle"
                 className="terrain-label strong"
-                style={{ fontSize: 10 * k, strokeWidth: 3 * k }}
+                style={{ fontSize: 10 * k * ls, strokeWidth: 3 * k * ls }}
               >
                 {c.cow.id}
               </text>
@@ -447,12 +482,12 @@ export function HerdMap({
             y={-6 * k}
             textAnchor="middle"
             className="terrain-label"
-            style={{ fontSize: 9 * k, strokeWidth: 2.5 * k }}
+            style={{ fontSize: 9 * k * ls, strokeWidth: 2.5 * k * ls }}
           >
             1 km
           </text>
         </g>
-        <g transform={`translate(${vb.x + 26 * k} ${vb.y + 34 * k}) scale(${k})`}>
+        <g transform={`translate(${vb.x + 26 * k} ${vb.y + 34 * k}) scale(${k * ls})`}>
           <path d="M0 -13 L5 6 L0 1 L-5 6 Z" fill="#fff" fillOpacity={0.85} />
           <text y={19} textAnchor="middle" className="terrain-label" style={{ fontSize: 9 }}>
             N

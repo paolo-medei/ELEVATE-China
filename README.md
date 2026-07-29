@@ -129,6 +129,10 @@ coloured by detection confidence. Flagged animals are always circled and labelle
 zoom. Click any animal for its record: ID, GPS, ground height, last seen, distance walked, time
 standing still, distance from its group.
 
+**Only animals to check** strips the map back to the animals with something against their name —
+seven dots instead of thirteen hundred — and draws them larger, without changing where the map is
+framed.
+
 Then **what to do today** — the jobs, each with coordinates — and a detail card per herd.
 
 ### 2 · Alerts
@@ -181,6 +185,16 @@ scripts/
   make-xlsx.ts     regenerates farm-data.xlsx
   standalone.mjs   inlines the build into FarmersWingman.html
 ```
+
+## On a phone
+
+The layout is built for a hand as well as a desk. Below 760 px the top bar splits in two — brand and
+controls on one row, the three tabs full width on the next — the key figures pair up two to a row,
+the grass legend drops out of the map and becomes a strip beneath it, the data drawer becomes a sheet
+at the foot of the screen, and every control is at least 36 px tall. Map labels and chart axes are
+set in SVG user units, so they are drawn nearly twice as large on a narrow screen to land back at a
+readable size once the drawing is scaled down. Checked at 360, 390, 430, 768, 844 and 1024 px wide,
+in portrait and landscape: no horizontal scrolling anywhere.
 
 > Demonstration dataset. The herds, flights and weather are simulated; the geography, the model
 > structure and the alert thresholds are the parts meant to be reviewed.

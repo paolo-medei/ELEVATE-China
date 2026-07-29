@@ -72,6 +72,11 @@ const DICT = {
   factDetectedNote: { en: 'seen by the last flight', zh: '最近一次航拍所见' },
   needCheck: { en: 'To check', zh: '待查看' },
   herdLongGone: { en: 'Missing for days', zh: '多日未见' },
+  mapRiskOnly: { en: 'Only animals to check', zh: '仅显示需查看的牛只' },
+  mapRiskSub: {
+    en: 'Showing the {n} animals with something against their name. Healthy stock is hidden.',
+    zh: '仅显示有异常记录的 {n} 头牛，正常牛只已隐藏。',
+  },
   mapAllSub: {
     en: 'Every animal is a dot, coloured by herd. Animals needing a person are circled and named.',
     zh: '每头牛为一个圆点，按牛群着色；需查看的牛只用圆圈标出并标注编号。',
